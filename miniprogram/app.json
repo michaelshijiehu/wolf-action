@@ -1,0 +1,44 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/usercenter/usercenter",
+    "pages/room/room",
+    "pages/setup/setup",
+    "pages/records/records",
+    "pages/recordDetail/recordDetail",
+    "pages/feedback/feedback",
+    "pages/rules/rules"
+  ],
+  "window": {
+    "backgroundColor": "#0a0a0c",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#0a0a0c",
+    "navigationBarTitleText": "Wolf Action",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#888888",
+    "selectedColor": "#ffd700",
+    "backgroundColor": "#16161a",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "大厅",
+        "iconPath": "images/icons/home.png",
+        "selectedIconPath": "images/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/usercenter/usercenter",
+        "text": "我的",
+        "iconPath": "images/icons/usercenter.png",
+        "selectedIconPath": "images/icons/usercenter-active.png"
+      }
+    ]
+  },
+  "requiredBackgroundModes": [
+    "audio"
+  ],
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

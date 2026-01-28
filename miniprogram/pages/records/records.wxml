@@ -1,0 +1,46 @@
+<!--miniprogram/pages/records/records.wxml-->
+<view class="container">
+  <view wx:if="{{records && records.length > 0}}" class="record-list">
+    <view class="record-item" wx:for="{{records}}" wx:for-item="record" wx:key="_id" bindtap="goToRecordDetail" data-id="{{record._id}}">
+      <view class="record-header">
+        <text class="record-date">{{record.record_date}}</text>
+        <text class="record-winner {{record.winner === 'good' ? 'winner-good' : 'winner-werewolf'}}">
+          {{record.winner === 'good' ? '好人胜利' : '狼人胜利'}}
+        </text>
+      </view>
+      <view class="record-players">
+        <view class="player-info" wx:for="{{record.players}}" wx:for-item="player" wx:key="seat">
+          <image class="player-avatar" src="{{player.avatar_url || '../../images/icons/avatar.png'}}"></image>
+          <text class="player-name">{{player.nickname}}</text>
+          <text class="player-role">{{utils.getRoleName(player.role)}}</text>
+        </view>
+      </view>
+      <text class="view-detail">查看详情 ></text>
+    </view>
+    <view wx:if="{{hasMoreRecords}}" class="load-more" bindtap="loadMoreRecords">加载更多</view>
+  </view>
+  <view wx:else class="empty-state">
+    <view class="empty-icon-box">
+      <text class="empty-icon">📜</text>
+    </view>
+    <text class="empty-title">暂无战绩</text>
+    <text class="empty-desc">你的传奇故事，将从下一局开始书写</text>
+    <button class="create-room-btn" bindtap="goToHome">去创建房间</button>
+  </view>
+</view>
+<wxs module="utils">
+module.exports.getRoleName = function(role) {
+  var map = {
+    'werewolf': '狼人',
+    'villager': '村民',
+    'seer': '预言家',
+    'witch': '女巫',
+    'hunter': '猎人',
+    'idiot': '白痴',
+    'guard': '守卫',
+    'cupid': '丘比特',
+    'unknown': '隐藏'
+  };
+  return map[role] || role;
+}
+</wxs>

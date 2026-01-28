@@ -1,0 +1,107 @@
+<view class="container">
+  <!-- Tabs -->
+  <view class="tabs">
+    <view class="tab {{activeTab === 'basic' ? 'active' : ''}}" bindtap="switchTab" data-tab="basic">基础说明</view>
+    <view class="tab {{activeTab === 'roles' ? 'active' : ''}}" bindtap="switchTab" data-tab="roles">角色能力</view>
+    <view class="tab {{activeTab === 'strategy' ? 'active' : ''}}" bindtap="switchTab" data-tab="strategy">进阶攻略</view>
+  </view>
+
+  <!-- Content Section -->
+  <scroll-view scroll-y class="content-area">
+    
+    <!-- 基础说明 -->
+    <view wx:if="{{activeTab === 'basic'}}" class="tab-content">
+      <view class="section">
+        <view class="title">游戏目标</view>
+        <view class="text">狼人杀是一款社交推理游戏。玩家被分为两个对立阵营：好人阵营和狼人阵营。</view>
+        <view class="bullet">好人阵营：放逐所有狼人即可获胜。</view>
+        <view class="bullet">狼人阵营：屠边（杀掉所有神职或所有村民）即可获胜。</view>
+      </view>
+
+      <view class="section">
+        <view class="title">游戏流程</view>
+        <view class="step">1. 夜晚：狼人袭击玩家，各神职人员（守卫、魔术师、预言家等）依次行动。某些角色如野孩子、丘比特仅在首夜睁眼。</view>
+        <view class="step">2. 天亮：系统宣布昨晚死亡情况。若有“熊”存在，系统将宣布其是否咆哮。</view>
+        <view class="step">3. 警长竞选：第一天白天可参选警长，警长拥有1.5票归票权并可决定发言顺序。</view>
+        <view class="step">4. 发言与投票：幸存玩家按顺序发言。骑士、白狼王等角色可在此时发动技能。最后投票放逐一名嫌疑人。</view>
+      </view>
+
+      <view class="section">
+        <view class="title">特殊机制</view>
+        <view class="bullet"><text class="highlight-sub">奶穿：</text>一名玩家同晚被守卫守护且被女巫救起，会因药力冲突死亡。</view>
+        <view class="bullet"><text class="highlight-sub">殉情：</text>情侣中一人死亡，另一人立即随之死亡。殉情猎人无法发动技能。</view>
+        <view class="bullet"><text class="highlight-sub">变异：</text>野孩子的榜样死后，野孩子将加入狼人阵营，当晚即可参与杀人。</view>
+      </view>
+    </view>
+
+    <!-- 角色能力 -->
+    <view wx:if="{{activeTab === 'roles'}}" class="tab-content">
+      <view class="role-card">
+        <view class="role-header">🐺 狼人</view>
+        <view class="role-desc">每晚共同杀死一名玩家。白天需隐藏身份，混淆视听。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">🔮 预言家</view>
+        <view class="role-desc">每晚查验一名玩家的阵营（好人或狼人）。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">🧙‍♀️ 女巫</view>
+        <view class="role-desc">拥有一瓶解药和一瓶毒药。除首夜外通常不能自救。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">🔫 猎人</view>
+        <view class="role-desc">被狼人杀害或投票放逐时可开枪带走一人。被毒死时无法开枪。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">🛡️ 守卫</view>
+        <view class="role-desc">每晚守护一人不被狼人杀害。不能连续两晚守护同一人。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">🗡️ 骑士</view>
+        <view class="role-desc">白天可随时决斗一人。若是狼，狼死并立即入夜；若是好人，骑士死。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">🐻 熊</view>
+        <view class="role-desc">天亮时，若熊相邻有狼人则咆哮，否则不咆哮。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">🎩 魔术师</view>
+        <view class="role-desc">每晚交换两人的号码，当晚该号码受到的技能效果互换。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">💤 摄梦人</view>
+        <view class="role-desc">每晚摄梦一人使其免伤。连续摄梦同一人或摄梦人死，则该玩家死。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">💄 狼美人</view>
+        <view class="role-desc">每晚魅惑一人。狼美人死，被魅惑者随之殉情。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">🥷 隐狼</view>
+        <view class="role-desc">被验显示为好人。知道狼队友，但狼人不知道隐狼。</view>
+      </view>
+      <view class="role-card">
+        <view class="role-header">👶 野孩子</view>
+        <view class="role-desc">首夜选榜样。榜样死，野孩子变狼。</view>
+      </view>
+    </view>
+
+    <!-- 进阶攻略 -->
+    <view wx:if="{{activeTab === 'strategy'}}" class="tab-content">
+      <view class="section">
+        <view class="title">全角色高阶博弈</view>
+        <view class="bullet"><text class="highlight-sub">魔术师交换：</text>后期应通过交换预言家与嫌疑狼的号码，诱使狼人“自杀”或让预言家获得“自验”的保护效果。</view>
+        <view class="bullet"><text class="highlight-sub">摄梦人梦杀：</text>针对身份极差的玩家，可采取连续两晚摄梦的操作进行“追刀”，此死亡无视女巫解药。</view>
+        <view class="bullet"><text class="highlight-sub">狼队配合：</text>白狼王应自爆带走已明身份的守卫或预言家；隐狼应积极倒钩真预言家，卖掉狼队友以坐实好人身份。</view>
+        <view class="bullet"><text class="highlight-sub">骑士决斗：</text>面对两名对跳预言家的玩家，骑士的决斗是最高效的定分逻辑，应在发言末尾发动以压缩狼人抗辩空间。</view>
+      </view>
+
+      <view class="section">
+        <view class="title">专业战术</view>
+        <view class="text"><text class="highlight">警徽流：</text>预言家应在遗言中交代后续两晚的查验计划，利用警徽的传递（给好人）或销毁（给狼人）来传递信息。</view>
+        <view class="text"><text class="highlight">反逻辑推导：</text>当常规逻辑无法解释场面时，考虑是否存在魔术师交换、石像鬼查验错误或野孩子变异的情况。</view>
+      </view>
+    </view>
+
+  </scroll-view>
+</view>

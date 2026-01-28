@@ -1,0 +1,113 @@
+<!-- pages/usercenter/usercenter.wxml -->
+<wxs module="tools">
+  module.exports.formatTime = function(dateStr) {
+    if (!dateStr) return '';
+    var date = getDate(dateStr);
+    var m = date.getMonth() + 1;
+    var d = date.getDate();
+    var h = date.getHours();
+    var min = date.getMinutes();
+    if (min < 10) min = '0' + min;
+    return m + '月' + d + '日 ' + h + ':' + min;
+  }
+</wxs>
+
+<view class="container">
+  <!-- 顶部背景层 -->
+  <view class="bg-layer"></view>
+
+  <view class="content-wrapper">
+    <!-- 用户信息 -->
+    <view class="profile-header" bindtap="onEditProfile">
+      <image class="avatar" src="{{userInfo.avatarUrl || '../../images/icons/avatar.png'}}" mode="aspectFill"></image>
+      <view class="profile-text">
+        <text class="nickname">{{userInfo.nickName || '点击登录/注册'}}</text>
+        <view class="user-badge">狼人杀爱好者</view>
+      </view>
+      <view class="edit-btn">设置 ></view>
+    </view>
+
+    <!-- 数据悬浮卡片 -->
+    <view class="stats-card">
+      <view class="stat-box">
+        <text class="stat-val">{{stats.total || 0}}</text>
+        <text class="stat-key">总局数</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-box">
+        <text class="stat-val">{{stats.wins || 0}}</text>
+        <text class="stat-key">胜场</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-box">
+        <text class="stat-val accent">{{stats.winRate || '0%'}}</text>
+        <text class="stat-key">胜率</text>
+      </view>
+    </view>
+
+    <!-- 最近战绩 -->
+    <view class="section-header" wx:if="{{recentRecord}}">
+      <text class="section-title">最近战绩</text>
+      <text class="section-more" bindtap="onTapMenuItem" data-path="/pages/records/records">全部 ></text>
+    </view>
+    
+    <view class="record-card" wx:if="{{recentRecord}}" bindtap="onTapRecent">
+      <view class="record-left">
+        <view class="role-icon-box {{recentRecord.winner === 'good' ? 'win' : 'lose'}}">
+           <text>{{recentRecord.winner === 'good' ? '🌕' : '🐺'}}</text>
+        </view>
+        <view class="record-info">
+          <text class="record-res">{{recentRecord.winner === 'good' ? '好人阵营胜利' : '狼人阵营胜利'}}</text>
+          <text class="record-date">{{tools.formatTime(recentRecord.game_start_time)}}</text>
+        </view>
+      </view>
+      <view class="record-right">
+        <text class="detail-btn">复盘</text>
+      </view>
+    </view>
+
+    <!-- 功能菜单 (Grid) -->
+    <view class="section-header">
+      <text class="section-title">功能服务</text>
+    </view>
+    <view class="menu-grid">
+      <view class="menu-card" bindtap="onTapMenuItem" data-path="/pages/records/records">
+        <view class="menu-icon-bg" style="background: rgba(24, 144, 255, 0.15); color: #1890ff;">📜</view>
+        <text class="menu-text">历史记录</text>
+      </view>
+      <view class="menu-card" bindtap="onTapMenuItem" data-path="/pages/rules/rules">
+        <view class="menu-icon-bg" style="background: rgba(82, 196, 26, 0.15); color: #52c41a;">📖</view>
+        <text class="menu-text">游戏规则</text>
+      </view>
+      <view class="menu-card" bindtap="onTapMenuItem" data-type="feedback">
+        <view class="menu-icon-bg" style="background: rgba(250, 173, 20, 0.15); color: #faad14;">💬</view>
+        <text class="menu-text">意见反馈</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer-info">Wolf Action v1.2.0</view>
+</view>
+
+<!-- 修改信息弹窗 -->
+<view class="edit-modal" wx:if="{{showEditModal}}">
+  <view class="modal-mask" bindtap="closeEditModal"></view>
+  <view class="modal-content">
+    <view class="modal-header">修改个人信息</view>
+    
+    <button class="avatar-wrapper" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+      <image class="avatar-preview" src="{{tempAvatarUrl || userInfo.avatarUrl || '../../images/icons/avatar.png'}}"></image>
+      <view class="avatar-tip">点击修改头像</view>
+    </button> 
+    
+    <view class="input-section">
+      <text class="input-label">昵称</text>
+      <input type="nickname" class="nickname-input" placeholder="请输入新昵称" value="{{tempNickname || userInfo.nickName}}" bindinput="onNicknameChange" bindchange="onNicknameChange" bindblur="onNicknameChange" />
+    </view>
+
+    <view class="modal-footer">
+      <button class="modal-btn cancel" bindtap="closeEditModal">取消</button>
+      <button class="modal-btn confirm" bindtap="saveProfile" loading="{{saveLoading}}">保存</button>
+    </view>
+  </view>
+</view>

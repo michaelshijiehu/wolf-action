@@ -1,0 +1,899 @@
+<!-- pages/room/room.wxml -->
+<wxs module="utils">
+module.exports.jsonStringify = function(obj) {
+  return JSON.stringify(obj, null, 2);
+}
+module.exports.getSeatStyle = function(index, total, isTheaterMode) {
+  var angle = (360 / total) * index;
+  var radius = isTheaterMode ? '450rpx' : '280rpx';
+  return 'transform: rotate(' + angle + 'deg) translateY(-' + radius + ') rotate(-' + angle + 'deg);';
+}
+// 角色汉化函数
+module.exports.getRoleName = function(role) {
+  var map = {
+    'werewolf': '狼人',
+    'villager': '村民',
+    'seer': '预言家',
+    'witch': '女巫',
+    'hunter': '猎人',
+    'idiot': '白痴',
+    'guard': '守卫',
+    'cupid': '丘比特',
+    'knight': '骑士',
+    'bear': '熊',
+    'merchant': '黑商',
+    'silencer': '禁言长老',
+    'gravekeeper': '守墓人',
+    'magician': '魔术师',
+    'dream_catcher': '摄梦人',
+    'wolf_king': '白狼王',
+    'wolf_beauty': '狼美人',
+    'hidden_wolf': '隐狼',
+    'gargoyle': '石像鬼',
+    'wild_child': '野孩子',
+    'bomberman': '炸弹人',
+    'judge': '法官',
+    'unknown': '隐藏'
+  };
+  return map[role] || role;
+}
+// 判断是否被狼人选中
+module.exports.isTargetedByWolves = function(votes, seat) {
+  if (!votes) return false;
+  var keys = Object.keys(votes);
+  for (var i = 0; i < keys.length; i++) {
+    if (votes[keys[i]] == seat) return true;
+  }
+  return false;
+}
+// 预言家获取查验结果
+module.exports.getCheckResult = function(history, seat) {
+  if (!history) return null;
+  for (var i = 0; i < history.length; i++) {
+    if (history[i].seat === seat) return history[i].isBad ? 'bad' : 'good';
+  }
+  return null;
+}
+// 从阶段名提取角色 Key
+module.exports.getPhaseRole = function(phase) {
+  if (!phase) return '';
+  if (phase.indexOf('werewolf') !== -1) return 'werewolf';
+  if (phase.indexOf('seer') !== -1) return 'seer';
+  if (phase.indexOf('witch') !== -1) return 'witch';
+  if (phase.indexOf('hunter') !== -1) return 'hunter';
+  if (phase.indexOf('guard') !== -1) return 'guard';
+  if (phase.indexOf('cupid') !== -1) return 'cupid';
+  if (phase.indexOf('idiot') !== -1) return 'idiot';
+  return '';
+}
+module.exports.getPhaseIcon = function(phase) {
+  var role = module.exports.getPhaseRole(phase);
+  if (role) return '../../images/roles/' + role + '.png';
+  return '';
+}
+module.exports.formatCandidateList = function(seats) {
+  if (!seats || seats.length === 0) return '暂无';
+  var list = [];
+  for (var i = 0; i < seats.length; i++) {
+    if (seats[i] && seats[i] > 0) list.push(seats[i]);
+  }
+  if (list.length === 0) return '暂无';
+  list.sort(function(a, b) { return a - b; });
+  return list.join(', ') + '号';
+}
+module.exports.isNominee = function(candidates, seat) {
+  if (!candidates || !candidates.length) return false;
+  return candidates.indexOf(seat) !== -1;
+}
+</wxs>
+<view class="not-found-container" wx:if="{{roomNotFound}}">
+  <image class="not-found-icon" src="../../images/icons/close.png" style="width: 120rpx; height: 120rpx; opacity: 0.5; margin-bottom: 20rpx; filter: grayscale(100%);"></image>
+  <view class="not-found-text">房间不存在或已解散</view>
+  <button class="primary-btn" bindtap="onBackHome" style="margin-top: 40rpx; width: 40%;">
+    返回大厅
+  </button>
+</view>
+<view class="container {{(!gameState || gameState.game_state.status === 'waiting' || gameState.game_state.phase !== 'night' || gameState.game_state.sub_phase === 'night_start') ? 'day-mode' : ''}} {{((isJudge || isCreator) && gameState.game_state.status === 'playing') ? 'with-judge-panel' : ''}}" wx:if="{{!loading && !roomNotFound}}">
+  <view class="header">
+    <view class="room-id">
+      房间号: {{roomId}}
+      <button size="mini" class="copy-btn" wx:if="{{gameState.game_state.status === 'waiting'}}" bindtap="onCopyRoomId">
+        复制
+      </button>
+    </view>
+    <view class="game-time" wx:if="{{gameDuration}}" style="font-weight: bold; color: #ffd700; font-size: 28rpx; background: rgba(0,0,0,0.3); padding: 4rpx 16rpx; border-radius: 10rpx;">
+      ⏱️ {{gameDuration}}
+    </view>
+  </view>
+  <view class="subtitle-overlay" wx:if="{{audioText}}">
+    <text>{{audioText}}</text>
+  </view>
+  <!-- 可拖拽圆桌区域 -->
+  <movable-area class="table-drag-area {{isTheaterMode ? 'full' : ''}}">
+    <movable-view class="table-movable-view {{isTheaterMode ? 'theater' : ''}}" direction="all" inertia out-of-bounds friction="1" damping="20" scale scale-min="0.5" scale-max="2" x="{{isTheaterMode ? -150 : 0}}" y="0">
+      <view class="table-container {{(gameState.game_state.status === 'waiting' || gameState.game_state.phase !== 'night' || gameState.game_state.sub_phase === 'night_start') ? 'day' : ''}}">
+        <view class="table-center">
+          <!-- 恢复桌面中心状态显示 -->
+          <view class="center-status-container" wx:if="{{gameState.game_state.status === 'playing'}}">
+            <view class="phase-text" style="margin-bottom: 20rpx;">
+              {{gameState.game_state.current_instruction.title}}
+            </view>
+            <!-- 使用正确匹配 CSS 的 timer 样式 -->
+            <view class="timer-circle" wx:if="{{countdown > 0}}">
+              <text class="timer-num">{{countdown}}</text>
+            </view>
+          </view>
+          <view class="voice-limit-tip" wx:if="{{ttsStatus === 'limit_reached'}}">
+            ⚠️ 语音额度耗尽，请检查百度云后台
+          </view>
+        </view>
+        <view class="seats-wrapper">
+          <block wx:for="{{gameState.players}}" wx:key="seat">
+            <view class="seat-item {{!item.is_alive ? 'dead' : ''}}" style="{{utils.getSeatStyle(index, gameState.players.length, isTheaterMode)}}" bindtap="onSeatTap" data-seat="{{item.seat}}" data-occupied="{{!!item.openid}}">
+              <view class="avatar-box {{mySeat === item.seat ? 'me' : ''}}">
+                <image class="avatar-img" src="{{item.avatar_url}}" wx:if="{{item.avatar_url}}"></image>
+                <view class="avatar-empty" wx:else>{{item.seat}}</view>
+                <!-- 座位号标识 (有头像时显示) -->
+                <view class="seat-badge" wx:if="{{item.avatar_url}}">{{item.seat}}</view>
+                <!-- 身份标识：仅在游戏开始后显示，且需满足权限 -->
+                <view class="role-badge" wx:if="{{gameState.game_state.status === 'playing' && (isJudge || (item.role === 'idiot' && item.role_state.idiot_revealed))}}">
+                  {{utils.getRoleName(item.role)}}
+                </view>
+                <!-- 警徽标志 -->
+                <view class="sheriff-badge" wx:if="{{gameState.game_state.sheriff_seat === item.seat}}">
+                  👮
+                </view>
+                <!-- 上警举手标志 -->
+                <view class="hand-raise-badge" wx:if="{{utils.isNominee(gameState.game_state.sheriff_candidate_seats, item.seat)}}">
+                  ✋
+                </view>
+                <!-- 预言家历史查验标记 (仅预言家本人可见) -->
+                <view class="check-mark" wx:if="{{myRole === 'seer' && utils.getCheckResult(myRoleState.check_history, item.seat)}}">
+                  {{utils.getCheckResult(myRoleState.check_history, item.seat) === 'bad' ? '🌑' : '🌕'}}
+                </view>
+                <image class="death-icon" wx:if="{{!item.is_alive}}" src="../../images/icons/close.png"></image>
+                <!-- 死亡原因标记 (仅法官或死者本人或白天结算后可见) -->
+                <view class="death-reason-mark" wx:if="{{!item.is_alive && item.death_reason === 'werewolf_kill'}}" title="被刀">
+                  🔪
+                </view>
+                <!-- 狼人目标标记 (狼人或法官可见) -->
+                <view class="target-mark" wx:if="{{(myRole === 'werewolf' || isJudge) && utils.isTargetedByWolves(gameState.current_round_actions.werewolf_votes, item.seat)}}">
+                  🎯
+                </view>
+                <!-- 预言家查验目标 (法官可见) -->
+                <view class="seer-mark-judge" wx:if="{{isJudge && gameState.current_round_actions.seer_check.target === item.seat}}">
+                  🔮
+                </view>
+                <!-- 守卫守护目标 (法官可见) -->
+                <view class="guard-mark-judge" wx:if="{{isJudge && gameState.current_round_actions.guard_protect === item.seat}}">
+                  🛡️
+                </view>
+                <!-- 女巫用药目标 (法官可见) -->
+                <view class="poison-mark" wx:if="{{(witchPoisonTarget == item.seat) || (isJudge && gameState.current_round_actions.witch_action.poison_target === item.seat)}}">
+                  ☠️
+                </view>
+                <view class="save-mark-judge" wx:if="{{isJudge && gameState.current_round_actions.witch_action.save && (wolfKillTarget && wolfKillTarget.seat === item.seat)}}">
+                  🍼
+                </view>
+                <!-- New: Witch View - Kill Target -->
+                <view class="witch-kill-indicator" wx:if="{{myRole === 'witch' && gameState.game_state.sub_phase === 'witch_action' && witchKillTarget === item.seat}}" style="position: absolute; top: -10rpx; left: 50%; transform: translateX(-50%); background: #ff4d4f; color: #fff; font-size: 20rpx; padding: 2rpx 12rpx; border-radius: 10rpx; font-weight: bold; z-index: 100; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.5); white-space: nowrap;">
+                  🚨 昨晚被杀
+                </view>
+                <!-- 情侣标志 (仅法官可见，玩家移动到身份卡内) -->
+                <view class="lover-badge" wx:if="{{isJudge && gameState.game_state.lovers.includes(item.seat)}}">
+                  ❤️
+                </view>
+                <!-- 丘比特连人目标标记 (法官可见或正在连接中) -->
+                <view class="target-mark" style="color: #ff85c0;" wx:if="{{(gameState.game_state.sub_phase === 'cupid_action' && cupidTargets.includes(item.seat))}}">
+                  💞
+                </view>
+                <!-- 白痴翻牌标志 -->
+                <view class="idiot-badge" wx:if="{{item.role === 'idiot' && item.role_state.idiot_revealed}}">
+                  🎭
+                </view>
+                <!-- Judge: Real-time Vote Monitor -->
+                <view class="judge-vote-indicator" wx:if="{{isJudge && (gameState.game_state.phase === 'day_voting' || gameState.game_state.phase === 'day_pk') && gameState.current_round_actions.day_votes[item.seat]}}">
+                  🗳️ {{gameState.current_round_actions.day_votes[item.seat]}}
+                </view>
+                <!-- Mark indicator -->
+                <view wx:if="{{ playerMarks[item.seat] }}" class="player-mark-indicator {{playerMarks[item.seat].value}}">
+                  <text>{{ playerMarks[item.seat].label }}</text>
+                </view>
+              </view>
+              <view class="seat-name">{{item.nickname}}</view>
+            </view>
+          </block>
+        </view>
+      </view>
+    </movable-view>
+  </movable-area>
+  <!-- 游戏辅助信息区 (仅保留方案 1) -->
+  <view class="game-extra-info" wx:if="{{gameState.game_state.status === 'playing'}}">
+    <!-- 方案 1: 动态事件简讯 -->
+    <view class="event-ticker" wx:if="{{tickerLogs.length > 0}}">
+      <view class="ticker-item" wx:for="{{tickerLogs}}" wx:key="index">
+        <view class="ticker-time">[{{item.day}}天]</view>
+        <view class="ticker-text">{{item.text}}</view>
+      </view>
+    </view>
+  </view>
+  <!-- 1. 等待阶段：配置面板 -->
+  <!-- 1. 等待阶段：配置面板 -->
+  <!-- 1. 等待阶段：配置面板 -->
+  <view class="setup-area" wx:if="{{gameState.game_state.status === 'waiting'}}">
+    <view class="setup-card">
+      <view class="header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx;">
+        <view class="count-tip">已入座: {{currentCount}} / {{gameState.players.length}}</view>
+        <view class="room-capacity" style="font-size: 24rpx; color: #888;">
+          {{gameState.players.length}}人局
+        </view>
+      </view>
+      <!-- Sitting Hint -->
+      <view class="sitting-hint-card" wx:if="{{!mySeat}}" style="background: rgba(24, 144, 255, 0.1); border: 1rpx dashed #1890ff; padding: 16rpx; border-radius: 12rpx; margin-bottom: 24rpx; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite;">
+        <text style="color: #1890ff; font-size: 26rpx; font-weight: bold;">👉 请点击圆桌上的空座位入座</text>
+      </view>
+      <!-- 配置概览 (点击前往设置页) -->
+      <view class="config-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; padding: 0 4rpx;">
+        <view style="font-size: 24rpx; color: rgba(255,255,255,0.4); font-weight: bold; text-transform: uppercase; letter-spacing: 2rpx;">
+          角色配置
+        </view>
+        <view style="font-size: 22rpx; color: #ffd700; opacity: 0.8;" wx:if="{{activeGodsText}}">
+          神职: {{activeGodsText}}
+        </view>
+      </view>
+      <view class="config-grid clickable" bindtap="goToSetup">
+        <view class="config-item">🐺 狼人: {{tempConfig.werewolf}}</view>
+        <view class="config-item">🧑‍🌾 村民: {{tempConfig.villager}}</view>
+        <view class="config-item">
+          🔮 神职: {{configTotal - tempConfig.werewolf - tempConfig.villager}}
+        </view>
+        <view class="arrow-right">></view>
+      </view>
+      <view class="lobby-action-row" style="display: flex; gap: 16rpx; margin-bottom: 24rpx;">
+        <button class="primary-btn" bindtap="onStartGame" style="flex: 1; margin-bottom: 0;">
+          开始游戏
+        </button>
+        <button class="secondary-btn" bindtap="onSeatTap" data-seat="{{mySeat}}" data-occupied="{{true}}" style="width: 220rpx; background: rgba(255,255,255,0.1); color: #fff;" wx:if="{{mySeat}}">
+          担任法官
+        </button>
+      </view>
+      <!-- 自动化测试功能 -->
+      <view class="lobby-footer" style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24rpx;">
+        <view class="manual-test-switch" style="display: flex; align-items: center;">
+          <text style="color: #888; font-size: 24rpx; margin-right: 10rpx;">手动测试</text>
+          <switch checked="{{manualTestMode}}" bindchange="onManualTestChange" color="#faad14" style="transform: scale(0.7);" />
+        </view>
+        <button size="mini" class="auto-fill-btn" bindtap="onAutoTest" style="margin: 0; background: rgba(24adb3, 0.2); color: #faad14; border: 1rpx solid #faad14;">
+          🤖 填充机器人
+        </button>
+      </view>
+    </view>
+  </view>
+  <!-- 游戏配置展示 (仅玩家可见) -->
+  <view class="game-config-info" wx:if="{{gameState.game_state.status === 'playing' && !isJudge}}">
+    <view class="config-tag">🐺 {{gameState.config.roles.werewolf}}</view>
+    <view class="config-tag">🧑‍🌾 {{gameState.config.roles.villager}}</view>
+    <view class="config-tag" wx:if="{{gameState.config.roles.seer}}">🔮</view>
+    <view class="config-tag" wx:if="{{gameState.config.roles.witch}}">🧪</view>
+    <view class="config-tag" wx:if="{{gameState.config.roles.hunter}}">🔫</view>
+    <view class="config-tag" wx:if="{{gameState.config.roles.idiot}}">🤤</view>
+    <view class="config-tag" wx:if="{{gameState.config.roles.guard}}">🛡️</view>
+    <view class="config-tag" wx:if="{{gameState.config.roles.cupid}}">💘</view>
+  </view>
+  <!-- 游戏行动操作区域 -->
+  <view class="action-area" wx:if="{{gameState.game_state.status === 'playing'}}">
+    <!-- 1. 预言家专有面板 -->
+    <view class="witch-panel" wx:if="{{gameState.game_state.current_instruction.actionPanel === 'seer' && myRole === 'seer'}}">
+      <view class="witch-card" style="border-color: #1890ff;">
+        <view class="panel-title" style="color: #1890ff;">预言家请行动</view>
+        <view class="tips">请点击头像选择查验目标</view>
+        <view class="seer-result" wx:if="{{myRoleState.check_history.length > 0}}">
+          <view class="section-label">查验记录:</view>
+          <view wx:for="{{myRoleState.check_history}}" wx:key="seat" style="font-size: 24rpx; color: #fff;">
+            {{item.seat}}号: {{item.isBad ? '黑人 (狼人) 🌑' : '白人 (好人) 🌕'}}
+          </view>
+        </view>
+        <button class="skip-btn" bindtap="onConfirmAction" wx:if="{{isMyTurn}}">
+          确定/空验 {{actionCountdown > 0 ? '(' + actionCountdown + 's)' : ''}}
+        </button>
+      </view>
+    </view>
+    <!-- 2. 守卫专有面板 -->
+    <view class="witch-panel" wx:elif="{{gameState.game_state.current_instruction.actionPanel === 'guard' && myRole === 'guard'}}">
+      <view class="witch-card" style="border-color: #52c41a;">
+        <view class="panel-title" style="color: #52c41a;">守卫请行动</view>
+        <view class="tips">请选择守护目标，不能连续守护同一人</view>
+        <view class="vote-status" style="margin-bottom: 20rpx; color: #ccc; font-size: 24rpx;">
+          <text wx:if="{{myRoleState.guard_last_protected_seat}}">
+            上轮守护: {{myRoleState.guard_last_protected_seat}}号
+          </text>
+          <text wx:else>上轮未进行守护</text>
+        </view>
+        <button class="skip-btn" bindtap="onConfirmAction" wx:if="{{isMyTurn}}">
+          确定/空守 {{actionCountdown > 0 ? '(' + actionCountdown + 's)' : ''}}
+        </button>
+      </view>
+    </view>
+    <!-- 3. 女巫专有面板 -->
+    <view class="witch-panel" wx:elif="{{gameState.game_state.current_instruction.actionPanel === 'witch' && myRole === 'witch'}}">
+      <view class="witch-card" style="border-color: #722ed1;">
+        <view class="panel-title" style="color: #722ed1;">女巫请行动</view>
+        <view class="witch-action-row" style="display: flex; justify-content: space-between; width: 100%; gap: 16rpx; margin-bottom: 12rpx;">
+          <view class="panel-header-row" style="margin-top:20rpx; border-top:1rpx solid rgba(255,255,255,0.1); paddingTop:10rpx;">
+            <view style="display:flex; gap:20rpx; align-items:center; flex-wrap:wrap;">
+              <!-- Bot Fill -->
+              <button size="mini" bindtap="onAutoTest" style="background:#1890ff; color:#fff; font-size:24rpx; padding: 0 16rpx;">
+                🤖 填充Bot
+              </button>
+              <!-- Manual Toggle -->
+              <button size="mini" bindtap="toggleManualMode" style="background:{{isManualMode ? '#faad14' : '#52c41a'}}; color:#fff; font-size:24rpx; padding: 0 16rpx;">
+                {{isManualMode ? '🛠️ 手动步进' : '🚀 自动流转'}}
+              </button>
+              <!-- Next Step (Only visible in Manual Mode) -->
+              <button size="mini" bindtap="onDevSimulate" wx:if="{{isManualMode}}" style="background:#722ed1; color:#fff; font-size:24rpx; padding: 0 16rpx;">
+                ▶️ 下一步
+              </button>
+              <button size="mini" bindtap="toggleGodView" style="background:#595959; color:#fff; font-size:24rpx; padding: 0 16rpx;">
+                👁️ 上帝视角
+              </button>
+              <!-- Run Tests -->
+              <button size="mini" bindtap="onRunTests" style="background:#ff4d4f; color:#fff; font-size:24rpx; padding: 0 16rpx;">
+                🧪 运行测试
+              </button>
+            </view>
+          </view>
+          <!-- 解药 -->
+          <view class="potion-section" style="flex: 1; background: rgba(255,255,255,0.05); padding: 12rpx; border-radius: 10rpx; display: flex; flex-direction: column; align-items: center;">
+            <view class="section-label" style="font-weight: bold; color: #aaa; font-size: 24rpx;">
+              解药
+            </view>
+            <block wx:if="{{!myRoleState.witch_save_used}}">
+              <view class="victim-info" wx:if="{{wolfKillTarget}}" style="font-size: 22rpx; color: #ff4d4f;">
+                {{wolfKillTarget.seat}}号 被刀
+              </view>
+              <view wx:else style="font-size: 22rpx; color: #52c41a;">平安夜</view>
+              <button size="mini" type="primary" disabled="{{!wolfKillTarget}}" bindtap="onWitchSave" style="font-size: 22rpx; margin-top: 5rpx;" wx:if="{{isMyTurn}}">
+                使用
+              </button>
+            </block>
+            <text wx:else style="color: #666; font-size: 22rpx;">已使用</text>
+          </view>
+          <!-- 毒药 -->
+          <view class="potion-section" style="flex: 1; background: rgba(255,255,255,0.05); padding: 12rpx; border-radius: 10rpx; display: flex; flex-direction: column; align-items: center;">
+            <view class="section-label" style="font-weight: bold; color: #aaa; font-size: 24rpx;">
+              毒药
+            </view>
+            <block wx:if="{{!myRoleState.witch_poison_used}}">
+              <text style="font-size: 20rpx; color: #aaa; text-align: center;">点击头像\n选择目标</text>
+              <text wx:if="{{witchPoisonTarget}}" style="color: #a0d911; font-size: 22rpx;">
+                已选 {{witchPoisonTarget}}号
+              </text>
+            </block>
+            <text wx:else style="color: #666; font-size: 22rpx;">已使用</text>
+          </view>
+        </view>
+        <button class="skip-btn" bindtap="onConfirmAction" wx:if="{{isMyTurn}}">
+          确定/结束 {{actionCountdown > 0 ? '(' + actionCountdown + 's)' : ''}}
+        </button>
+      </view>
+    </view>
+    <!-- 4. 警长竞选面板 -->
+    <view class="witch-panel" wx:elif="{{gameState.game_state.current_instruction.actionPanel === 'sheriff_nomination' && !isJudge}}">
+      <view class="witch-card" style="border-color: #ffd700;">
+        <view class="panel-title" style="color: #ffd700;">警长竞选</view>
+        <view class="tips" style="color: #888; font-size: 22rpx;">想要竞选警长的玩家请上警</view>
+        <view class="nominate-row" style="display: flex; gap: 20rpx; justify-content: center; margin: 16rpx 0;">
+          <button 
+            bindtap="onSheriffJoin" 
+            data-join="{{!isSheriffCandidate}}" 
+            type="{{isSheriffCandidate ? 'warn' : 'primary'}}" 
+            size="mini"
+            style="min-width: 200rpx; font-weight: bold; border-radius: 30rpx;">
+            {{isSheriffCandidate ? '🔙 退水 (已上警)' : '✋ 我要上警'}}
+          </button>
+        </view>
+        <view class="tips" style="font-size: 24rpx; color: #ffd700;">
+          当前候选: {{utils.formatCandidateList(gameState.game_state.sheriff_candidate_seats)}}
+        </view>
+      </view>
+    </view>
+    <!-- 5. 通用/其他行动面板 (投票, 狼人, 丘比特, 猎人, 移交警徽 等) -->
+    <view class="witch-panel" wx:elif="{{gameState.game_state.current_instruction.actionPanel !== 'none' && isMyTurn}}">
+      <view class="witch-card" style="border-color: {{gameState.game_state.current_instruction.color || '#ffd700'}};">
+        <view class="panel-title" style="color: {{gameState.game_state.current_instruction.color || '#ffd700'}};">
+          {{gameState.game_state.current_instruction.title}}
+        </view>
+        <view class="tips" style="color: #888; font-size: 22rpx;">
+          {{gameState.game_state.current_instruction.tips}}
+        </view>
+        <view class="vote-status" style="text-align: center; color: #ccc; font-size: 24rpx; margin-bottom: 12rpx;">
+          <block wx:if="{{gameState.game_state.current_instruction.actionPanel === 'werewolf'}}">
+            {{wolfConsensusTarget ? '🔥 队友集火: ' + wolfConsensusTarget + '号' : '请与队友商议目标'}}
+          </block>
+          <block wx:elif="{{gameState.game_state.current_instruction.actionPanel === 'cupid'}}">
+            已连: {{cupidTargets[0] || '?'}} & {{cupidTargets[1] || '?'}}
+          </block>
+          <block wx:elif="{{gameState.game_state.current_instruction.actionPanel === 'vote_sheriff' || gameState.game_state.current_instruction.actionPanel === 'vote_exile' || gameState.game_state.current_instruction.actionPanel === 'pk_voting'}}">
+            {{myVoteTarget ? '我的投票: ' + myVoteTarget + '号' : '请点击所投玩家头像'}}
+          </block>
+          <block wx:elif="{{gameState.game_state.current_instruction.actionPanel === 'hunter_action' || gameState.game_state.current_instruction.actionPanel === 'hunter_confirm'}}">
+            {{myRole === 'hunter' ? (gameState.game_state.current_instruction.actionPanel === 'hunter_confirm' ? '我的状态: ' + (myRoleState.is_poisoned ? '不可开枪' : '可开枪') : '请选择带走目标') : '请等待猎人行动'}}
+          </block>
+        </view>
+        <button class="skip-btn" wx:if="{{gameState.game_state.current_instruction.actionBtn}}" bindtap="onConfirmAction">
+          {{gameState.game_state.current_instruction.actionBtn}} {{actionCountdown > 0 ? '(' + actionCountdown + 's)' : ''}}
+        </button>
+      </view>
+    </view>
+  </view>
+  <!-- 上帝/房主底部面板 (还原) -->
+  <view class="judge-panel" wx:if="{{(isJudge || isCreator) && gameState.game_state.status === 'playing'}}">
+    <!-- 上帝视野：玩家身份列表 (可折叠) -->
+    <view class="god-view-list" style="margin-bottom: 24rpx; background: rgba(255,255,255,0.03); border-radius: 16rpx; border: 1rpx solid rgba(255,255,255,0.05);">
+      <view bindtap="toggleGodView" style="font-size: 20rpx; color: #888; padding: 12rpx; text-align: center; letter-spacing: 4rpx; border-bottom: {{showGodViewList ? '1rpx solid rgba(255,255,255,0.05)' : 'none'}};">
+        {{showGodViewList ? '▼ 收起全场身份' : '▶ 查看全场身份'}}
+      </view>
+      <view class="god-player-grid" wx:if="{{showGodViewList}}" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10rpx; padding: 16rpx;">
+        <block wx:for="{{gameState.players}}" wx:key="seat">
+          <view class="god-player-item {{item.is_alive ? '' : 'god-dead'}}" style="display: flex; flex-direction: column; align-items: center; background: rgba(0,0,0,0.2); padding: 8rpx; border-radius: 8rpx; position: relative;">
+            <view style="font-size: 18rpx; color: #666; margin-bottom: 4rpx;">{{item.seat}}</view>
+            <view style="font-size: 22rpx; font-weight: bold; color: {{item.role === 'werewolf' ? '#ff4d4f' : (item.role === 'villager' ? '#eee' : '#ffd700')}}; opacity: {{item.is_alive ? 1 : 0.4}};">
+              {{utils.getRoleName(item.role)}}
+            </view>
+            <view wx:if="{{!item.is_alive}}" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 20rpx; color: #ff4d4f; border-radius: 8rpx;">
+              ✕
+            </view>
+          </view>
+        </block>
+      </view>
+    </view>
+    <!-- Debug Actions Toolbar -->
+    <view class="panel-header-row" style="margin-bottom: 20rpx; border-bottom: 1rpx solid rgba(255,255,255,0.05); padding-bottom: 16rpx;">
+      <view style="display:flex; gap:16rpx; align-items:center; flex-wrap:wrap;">
+        <button size="mini" bindtap="onAutoTest" style="background:#1890ff; color:#fff; font-size:24rpx; padding: 0 16rpx; margin:0;">
+          🤖 填充Bot
+        </button>
+        <button size="mini" bindtap="toggleManualMode" style="background:{{isManualMode ? '#faad14' : '#52c41a'}}; color:#fff; font-size:24rpx; padding: 0 16rpx; margin:0;">
+          {{isManualMode ? '🛠️ 手动' : '🚀 自动'}}
+        </button>
+        <button size="mini" bindtap="onDevSimulate" wx:if="{{isManualMode}}" style="background:#722ed1; color:#fff; font-size:24rpx; padding: 0 16rpx; margin:0;">
+          ▶️ 下一步
+        </button>
+      </view>
+    </view>
+    <view class="panel-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; padding-bottom: 10rpx; border-bottom: 1rpx solid rgba(255,255,255,0.1);">
+      <view style="font-size: 26rpx; color: #ffd700; font-weight: bold;">
+        当前: {{gameState.game_state.current_instruction.title}}
+      </view>
+      <view style="display:flex; gap:24rpx; align-items: center;">
+        <view catchtap="toggleLog" style="font-size:40rpx; padding: 10rpx; background: rgba(255,255,255,0.1); border-radius: 8rpx;">
+          📜
+        </view>
+        <view catchtap="toggleTheaterMode" style="font-size:40rpx; padding: 10rpx; background: rgba(255,255,255,0.1); border-radius: 8rpx;">
+          {{isTheaterMode ? '🔳' : '🔲'}}
+        </view>
+        <view catchtap="toggleRoleCard" style="font-size:40rpx; padding: 10rpx; background: rgba(255,255,255,0.1); border-radius: 8rpx;">
+          🆔
+        </view>
+      </view>
+    </view>
+    <!-- 2. Action Summary (Night Only) -->
+    <view class="judge-summary-box" wx:if="{{isJudge && judgeSummary}}" style="margin-bottom: 24rpx; background: rgba(0,0,0,0.2); padding: 16rpx; border-radius: 12rpx;">
+      <!-- Wolf Section -->
+      <view class="summary-section" style="margin-bottom: 16rpx;">
+        <view style="font-size: 22rpx; color: #ff4d4f; margin-bottom: 12rpx; font-weight: bold; opacity: 0.8;">
+          狼人阵营
+        </view>
+        <view class="sum-prop" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16rpx;">
+          <view class="sum-item">
+            <text>🔪 击杀:</text>
+            <text class="{{judgeSummary.wolfTarget ? '' : 'dim'}}">
+              {{judgeSummary.wolfTarget ? judgeSummary.wolfTarget + '号' : '未定'}}
+            </text>
+          </view>
+          <view class="sum-item" wx:if="{{judgeSummary.wolf_beauty}}">
+            <text>💄 魅惑:</text>
+            <text class="{{judgeSummary.wolf_beauty.target ? '' : 'dim'}}">
+              {{judgeSummary.wolf_beauty.target ? judgeSummary.wolf_beauty.target + '号' : '无'}}
+            </text>
+          </view>
+          <view class="sum-item" wx:if="{{judgeSummary.lovers.length > 0}}">
+            <text>❤️ 情侣:</text>
+            <text>{{judgeSummary.lovers[0]}} & {{judgeSummary.lovers[1]}}</text>
+          </view>
+        </view>
+      </view>
+      <!-- God Section -->
+      <view class="summary-section">
+        <view style="font-size: 22rpx; color: #ffd700; margin-bottom: 12rpx; font-weight: bold; opacity: 0.8;">
+          神职/特殊
+        </view>
+        <view class="sum-prop" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16rpx;">
+          <!-- 预言家 -->
+          <view class="sum-item" wx:if="{{judgeSummary.seer}}">
+            <text>🔮 查验:</text>
+            <text class="{{judgeSummary.seer.target ? '' : 'dim'}}">
+              {{judgeSummary.seer.target ? judgeSummary.seer.target + '号' : '未验'}}
+            </text>
+            <text wx:if="{{judgeSummary.seer.target}}" style="margin-left:4rpx; color: {{judgeSummary.seer.isBad ? '#ff4d4f' : '#52c41a'}}">
+              {{judgeSummary.seer.isBad ? '(狼)' : '(金)'}}
+            </text>
+          </view>
+          <!-- 守卫 -->
+          <view class="sum-item" wx:if="{{judgeSummary.guard}}">
+            <text>🛡️ 守卫:</text>
+            <text class="{{judgeSummary.guard.target ? '' : 'dim'}}">
+              {{judgeSummary.guard.target ? judgeSummary.guard.target + '号' : '空守'}}
+            </text>
+          </view>
+          <!-- 女巫 -->
+          <view class="sum-item" wx:if="{{judgeSummary.witch}}">
+            <text>💊 救药:</text>
+            <text class="{{judgeSummary.witch.save ? 'active' : 'dim'}}">
+              {{judgeSummary.witch.save ? '已用' : '未用'}}
+            </text>
+          </view>
+          <view class="sum-item" wx:if="{{judgeSummary.witch}}">
+            <text>🧪 毒药:</text>
+            <text class="{{judgeSummary.witch.poison ? 'active' : 'dim'}}">
+              {{judgeSummary.witch.poison ? judgeSummary.witch.poison + '号' : '未用'}}
+            </text>
+          </view>
+          <!-- 摄梦人 -->
+          <view class="sum-item" wx:if="{{judgeSummary.dream_catcher}}">
+            <text>💤 摄梦:</text>
+            <text class="{{judgeSummary.dream_catcher.target ? '' : 'dim'}}">
+              {{judgeSummary.dream_catcher.target ? judgeSummary.dream_catcher.target + '号' : '无'}}
+            </text>
+          </view>
+          <!-- 禁言 -->
+          <view class="sum-item" wx:if="{{judgeSummary.silencer}}">
+            <text>🤐 禁言:</text>
+            <text class="{{judgeSummary.silencer.target ? '' : 'dim'}}">
+              {{judgeSummary.silencer.target ? judgeSummary.silencer.target + '号' : '无'}}
+            </text>
+          </view>
+          <!-- 魔术师 -->
+          <view class="sum-item" wx:if="{{judgeSummary.magician}}">
+            <text>🎩 交换:</text>
+            <text class="{{judgeSummary.magician.targets ? '' : 'dim'}}">
+              {{judgeSummary.magician.targets ? judgeSummary.magician.targets[0] + '&' + judgeSummary.magician.targets[1] : '无'}}
+            </text>
+          </view>
+          <!-- 野孩子 -->
+          <view class="sum-item" wx:if="{{judgeSummary.wild_child}}">
+            <text>👶 榜样:</text>
+            <text class="{{judgeSummary.wild_child.model ? '' : 'dim'}}">
+              {{judgeSummary.wild_child.model ? judgeSummary.wild_child.model + '号' : '未选'}}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <!-- 3. Controls -->
+    <view class="judge-actions-row" style="display: flex; gap: 20rpx; justify-content: flex-end;">
+      <button size="mini" type="primary" bindtap="onDevSimulate" wx:if="{{hasBots}}" style="background: rgba(82, 196, 26, 0.2) !important; color: #52c41a; border: 1rpx solid #52c41a;">
+        🤖 机器人托管
+      </button>
+      <button size="mini" type="warn" bindtap="onNextPhase" style="background: #ff4d4f !important; color: #fff;">
+        ⏭️ 下一阶段
+      </button>
+    </view>
+  </view>
+  <!-- 悬浮日志按钮 -->
+  <!-- 身份卡片 (右侧悬浮) -->
+  <!-- 底部菜单栏 (仅普通玩家) -->
+  <view class="game-tools-bar" wx:if="{{gameState.game_state.status === 'playing' && !isJudge && !isCreator}}">
+    <view class="tool-item" bindtap="toggleLog">
+      <view class="tool-icon">📜</view>
+      <text class="tool-label">记录</text>
+    </view>
+    <view class="tool-item" bindtap="toggleTheaterMode">
+      <view class="tool-icon">{{isTheaterMode ? '🔳' : '🔲'}}</view>
+      <text class="tool-label">视野</text>
+    </view>
+    <view class="tool-item" bindtap="toggleRoleCard">
+      <view class="tool-icon">🆔</view>
+      <text class="tool-label">身份</text>
+    </view>
+  </view>
+  <!-- 日志弹窗 -->
+  <view class="log-modal {{showLog ? 'show' : ''}}" hidden="{{!showLog}}">
+    <view class="log-header">
+      <view class="log-tabs" style="display: flex; gap: 40rpx; font-size: 32rpx;">
+        <view class="log-tab {{logTab === 'vote' ? 'active' : ''}}" bindtap="switchLogTab" data-tab="vote" style="{{logTab === 'vote' ? 'color: #ffd700; border-bottom: 4rpx solid #ffd700; padding-bottom: 10rpx;' : 'color: #888;'}}">
+          投票
+        </view>
+        <view class="log-tab {{logTab === 'text' ? 'active' : ''}}" bindtap="switchLogTab" data-tab="text" style="{{logTab === 'text' ? 'color: #ffd700; border-bottom: 4rpx solid #ffd700; padding-bottom: 10rpx;' : 'color: #888;'}}">
+          日志
+        </view>
+      </view>
+      <view class="close-btn" bindtap="toggleLog">×</view>
+    </view>
+    <scroll-view scroll-y class="log-content">
+      <!-- 1. 投票记录 Tab -->
+      <block wx:if="{{logTab === 'vote'}}">
+        <block wx:for="{{enrichedVotingHistory}}" wx:for-item="round" wx:key="index">
+          <view class="voting-round">
+            <view class="voting-round-title">
+              Day {{round.day}} {{round.phase === 'sheriff_election' ? '警长竞选' : (round.phase === 'sheriff_pk_voting' ? '警长PK' : (round.phase === 'pk_voting' ? 'PK投票' : '放逐投票'))}}
+            </view>
+            <view class="voting-grid">
+              <block wx:for="{{round.enrichedVotes}}" wx:for-item="group" wx:key="targetSeat">
+                <view class="vote-row" style="justify-content: space-between; align-items: stretch;">
+                  <!-- 左侧：投票者列表 -->
+                  <view class="voters-list" style="display: flex; flex-wrap: wrap; gap: 10rpx; flex: 1;">
+                    <block wx:for="{{group.voters}}" wx:for-item="voter" wx:key="seat">
+                      <view class="player-mini">
+                        <image class="avatar-mini" src="{{voter.avatar}}"></image>
+                        <text class="seat-mini">{{voter.seat}}号</text>
+                      </view>
+                    </block>
+                  </view>
+                  <!-- 中间：箭头 -->
+                  <view class="vote-arrow-box" style="display: flex; align-items: center; padding: 0 20rpx;">
+                    <text class="vote-arrow-icon">➔</text>
+                  </view>
+                  <!-- 右侧：目标 -->
+                  <view class="player-mini" style="align-self: center;">
+                    <block wx:if="{{!group.isAbstain}}">
+                      <image class="avatar-mini target-border" src="{{group.targetAvatar}}"></image>
+                      <text class="seat-mini target-text">{{group.targetSeat}}号</text>
+                    </block>
+                    <block wx:else>
+                      <view class="abstain-box">弃票</view>
+                    </block>
+                  </view>
+                </view>
+              </block>
+            </view>
+          </view>
+        </block>
+        <view wx:if="{{!enrichedVotingHistory || enrichedVotingHistory.length === 0}}" style="text-align: center; color: #666; margin-top: 50rpx;">
+          暂无投票记录
+        </view>
+      </block>
+      <!-- 2. 文本日志 Tab -->
+      <block wx:if="{{logTab === 'text'}}">
+        <block wx:for="{{gameState.timeline}}" wx:key="index">
+          <view class="log-item">
+            <text class="log-time">Day {{item.day}}</text>
+            <text class="log-text">{{item.text}}</text>
+          </view>
+        </block>
+        <block wx:if="{{gameState.game_state.status === 'finished'}}">
+          <view style="text-align: center; margin: 40rpx 0 20rpx; color: #ffd700; font-weight: bold; font-size: 28rpx;">
+            --- 局后复盘 ---
+          </view>
+          <!-- 预言家验人信息 -->
+          <block wx:for="{{gameState.players}}" wx:key="seat" wx:if="{{item.role === 'seer'}}">
+            <view class="log-item-box" style="margin-bottom: 20rpx;">
+              <view class="log-time" style="color: #1890ff;">🔮 预言家 ({{item.seat}}号)</view>
+              <view class="log-text" style="color: #eee;">
+                <block wx:if="{{item.role_state.check_history && item.role_state.check_history.length}}">
+                  <view wx:for="{{item.role_state.check_history}}" wx:for-item="check" wx:key="day" style="margin-top: 5rpx;">
+                    第{{check.day}}夜: 查验 {{check.seat}}号 ->
+                    <text style="color: {{check.isBad ? '#ff4d4f' : '#52c41a'}}">
+                      {{check.isBad ? '狼人' : '好人'}}
+                    </text>
+                  </view>
+                </block>
+                <view wx:else>无查验记录</view>
+              </view>
+            </view>
+          </block>
+          <!-- 女巫用药信息 -->
+          <block wx:for="{{gameState.players}}" wx:key="seat" wx:if="{{item.role === 'witch'}}">
+            <view class="log-item-box" style="margin-bottom: 20rpx;">
+              <view class="log-time" style="color: #722ed1;">🧙‍♀️ 女巫 ({{item.seat}}号)</view>
+              <view class="log-text" style="color: #eee;">
+                <view>解药: {{item.role_state.witch_save_used ? '已使用' : '未使用'}}</view>
+                <view>毒药: {{item.role_state.witch_poison_used ? '已使用' : '未使用'}}</view>
+              </view>
+            </view>
+          </block>
+        </block>
+        <view wx:if="{{(!gameState.timeline || gameState.timeline.length === 0) && gameState.game_state.status !== 'finished'}}" style="text-align: center; color: #666; margin-top: 50rpx;">
+          暂无记录
+        </view>
+      </block>
+    </scroll-view>
+  </view>
+  <!-- 身份牌按钮 -->
+  <!-- 身份牌弹窗 -->
+  <view class="role-modal {{showRoleCard ? 'show' : ''}}" bindtap="toggleRoleCard" hidden="{{!showRoleCard}}">
+    <view class="role-card-3d {{roleCardFlipped ? 'flipped' : ''}}" catchtap="onCardTap">
+      <view class="role-card-inner">
+        <!-- 背面: 初始显示 -->
+        <view class="role-card-face role-card-back">
+          <view class="card-pattern"></view>
+          <view class="card-logo">ID</view>
+          <view class="card-hint">点击翻转查看身份</view>
+        </view>
+        <!-- 正面: 身份信息 -->
+        <view class="role-card-face role-card-front">
+          <view class="role-title">您的身份</view>
+          <view class="role-name-large">{{isJudge ? '法官' : utils.getRoleName(myRole)}}</view>
+          <view class="role-emoji-large" style="font-size: 160rpx; margin-bottom: 40rpx; text-shadow: 0 10rpx 20rpx rgba(0,0,0,0.5);">
+            <text wx:if="{{isJudge}}">⚖️</text>
+            <text wx:elif="{{myRole==='werewolf'}}">🐺</text>
+            <text wx:elif="{{myRole==='villager'}}">🧑‍🌾</text>
+            <text wx:elif="{{myRole==='seer'}}">🔮</text>
+            <text wx:elif="{{myRole==='witch'}}">🧙‍♀️</text>
+            <text wx:elif="{{myRole==='hunter'}}">🔫</text>
+            <text wx:elif="{{myRole==='guard'}}">🛡️</text>
+            <text wx:elif="{{myRole==='idiot'}}">🤡</text>
+            <text wx:elif="{{myRole==='cupid'}}">💘</text>
+            <text wx:else>❓</text>
+          </view>
+          <view class="role-desc">
+            <text wx:if="{{isJudge}}">您是本局的上帝，拥有全场最高视角。您可以观察所有玩家的真实身份及夜间行动。</text>
+            <text wx:elif="{{myRole==='werewolf'}}">每天晚上可以袭击一名玩家。</text>
+            <text wx:elif="{{myRole==='seer'}}">每天晚上可以查验一名玩家的身份。</text>
+            <text wx:elif="{{myRole==='witch'}}">拥有一瓶解药和一瓶毒药。</text>
+            <text wx:elif="{{myRole==='hunter'}}">出局时可以开枪带走一名玩家。</text>
+            <text wx:elif="{{myRole==='guard'}}">每晚守护一名玩家。</text>
+            <text wx:elif="{{myRole==='villager'}}">没有特殊技能，主要靠推理。</text>
+            <text wx:else>点击查看详细技能描述。</text>
+          </view>
+          <!-- 动态关联信息 -->
+          <view class="teammate-box" wx:if="{{(myRole === 'werewolf' || myRole === 'hidden_wolf') && !isJudge}}">
+            <view class="teammate-title" style="color: #ff4d4f;">狼人同伴</view>
+            <view class="teammate-list">
+              <block wx:for="{{gameState.players}}" wx:key="seat">
+                <view class="teammate-item" wx:if="{{item.role === 'werewolf' && item.seat !== mySeat}}">
+                  {{item.seat}}号 {{item.nickname}}
+                  <text wx:if="{{!item.is_alive}}" style="color: #666; font-size: 22rpx;">
+                    (已出局)
+                  </text>
+                </view>
+              </block>
+            </view>
+          </view>
+          <button class="modal-explode-btn" wx:if="{{!isJudge && myRole === 'werewolf' && isAlive && gameState.game_state.phase !== 'night'}}" bindtap="onWolfExplode">
+            💥 狼人自爆
+          </button>
+          
+          <!-- New: Confirm Role Button (deal_cards phase) -->
+          <view wx:if="{{gameState.game_state.sub_phase === 'deal_cards' && !isJudge}}" style="margin-top: 30rpx; width: 100%; display: flex; flex-direction: column; align-items: center; z-index: 999;">
+            <button 
+              catchtap="onConfirmRole" 
+              disabled="{{hasConfirmedRole}}"
+              class="confirm-btn"
+              style="background: {{hasConfirmedRole ? 'rgba(82, 196, 26, 0.8)' : 'rgba(250, 173, 20, 0.9)'}}; color: #fff; width: 80%; font-size: 30rpx; border-radius: 40rpx; border: 2rpx solid rgba(255,255,255,0.3); padding: 10rpx 0; font-weight: bold; box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.3);">
+              {{hasConfirmedRole ? '已确认，等待他人' : '我看好了'}}
+            </button>
+            <view style="color: rgba(255,255,255,0.8); font-size: 24rpx; margin-top: 15rpx; text-shadow: 0 2rpx 4rpx rgba(0,0,0,0.8);">
+              ({{confirmedCount || 0}}/{{currentCount || 0}} 已确认)
+            </view>
+          </view>
+
+          <view class="close-card-hint" bindtap="toggleRoleCard">点击空白处收起</view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <!-- Mark Player Modal -->
+  <view hidden="{{ !showMarkModal }}" class="mark-modal-overlay" bindtap="hideMarkPlayerModal">
+    <view class="mark-modal-content" catchtap="doNothing">
+      <!-- catchtap to prevent modal closing when clicking inside -->
+      <text class="modal-title">标记 {{ currentMarkPlayerSeat }}号 玩家</text>
+      <view class="mark-options">
+        <block wx:for="{{ markOptions }}" wx:for-item="option" wx:key="value">
+          <view class="mark-option {{ currentMark === option.value ? 'selected' : '' }}" bindtap="selectMarkOption" data-mark="{{ option.value }}">
+            <!-- For marking, display text label directly -->
+            <text class="option-label">{{ option.label }}</text>
+          </view>
+        </block>
+      </view>
+      <button class="confirm-mark-btn" bindtap="confirmMarkPlayer">确定</button>
+      <button class="clear-mark-btn" bindtap="clearMarkPlayer">清除标记</button>
+    </view>
+  </view>
+  <!-- 归票结算弹窗 -->
+  <view class="log-modal {{showVoteResultModal ? 'show' : ''}}" style="z-index: 1500; height: 75vh;" hidden="{{!showVoteResultModal}}">
+    <view class="log-header" style="border-bottom: 2rpx solid #ffd700;">
+      <text>📊 本轮归票详情</text>
+      <view class="close-btn" bindtap="closeVoteResultModal" style="font-size: 32rpx; color: #888;">
+        (自动关闭)
+      </view>
+    </view>
+    <scroll-view scroll-y class="log-content">
+      <block wx:if="{{currentVoteResult}}">
+        <view class="vote-result-list" style="padding: 20rpx; padding-bottom: 40rpx;">
+          <view class="voting-round-title" style="text-align:center; margin-bottom:20rpx; font-size: 32rpx; font-weight: bold; color: #ffd700;">
+            {{currentVoteResult.phase === 'sheriff_election' ? '警长竞选结果' : '放逐投票结果'}}
+          </view>
+          <block wx:for="{{currentVoteResult.enrichedVotes}}" wx:for-item="group" wx:key="targetSeat">
+            <view class="vote-result-card" style="background: rgba(255,255,255,0.08); border-radius: 20rpx; padding: 20rpx; margin-bottom: 20rpx; display: flex; align-items: center; justify-content: space-between;">
+              <!-- 左侧：投票者阵营 -->
+              <view class="voter-group" style="flex: 1; display: flex; flex-wrap: wrap; gap: 8rpx;">
+                <block wx:for="{{group.voters}}" wx:for-item="voter" wx:key="seat">
+                  <view class="voter-avatar-box" style="position: relative;">
+                    <image src="{{voter.avatar}}" style="width: 60rpx; height: 60rpx; border-radius: 50%; border: 2rpx solid #aaa;"></image>
+                    <view style="position: absolute; bottom: -10rpx; left: 0; right: 0; background: #333; color: #fff; font-size: 18rpx; text-align: center; border-radius: 10rpx; opacity: 0.9;">
+                      {{voter.seat}}号
+                    </view>
+                  </view>
+                </block>
+              </view>
+              <!-- 中间：箭头与票数 -->
+              <view class="vote-arrow-section" style="margin: 0 20rpx; display: flex; flex-direction: column; align-items: center;">
+                <text style="font-size: 24rpx; color: #ffd700; font-weight: bold;">
+                  {{group.voters.length}}票
+                </text>
+                <text style="font-size: 40rpx; color: #aaa; line-height: 1;">➔</text>
+              </view>
+              <!-- 右侧：被投目标 -->
+              <view class="target-group" style="width: 100rpx; display: flex; flex-direction: column; align-items: center;">
+                <block wx:if="{{!group.isAbstain}}">
+                  <image src="{{group.targetAvatar}}" style="width: 80rpx; height: 80rpx; border-radius: 50%; border: 4rpx solid #ff4d4f; box-shadow: 0 0 10rpx rgba(255, 77, 79, 0.5);"></image>
+                  <text style="font-size: 28rpx; font-weight: bold; color: #ff4d4f; margin-top: 6rpx;">
+                    {{group.targetSeat}}号
+                  </text>
+                </block>
+                <block wx:else>
+                  <view class="abstain-box" style="width: 80rpx; height: 80rpx; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40rpx;">
+                    😶
+                  </view>
+                  <text style="font-size: 24rpx; color: #aaa; margin-top: 6rpx;">弃票</text>
+                </block>
+              </view>
+            </view>
+          </block>
+        </view>
+      </block>
+      <view wx:else style="text-align: center; margin-top: 100rpx; color: #666;">获取结果中...</view>
+    </scroll-view>
+    <view style="display: flex; justify-content: center; padding-top: 10rpx;">
+      <button class="primary-btn" style="width: 300rpx; height: 80rpx; line-height: 80rpx; border-radius: 40rpx; font-size: 28rpx; margin: 0; flex-shrink: 0;" bindtap="closeVoteResultModal">
+        关闭
+      </button>
+    </view>
+  </view>
+</view>
+<!-- 强制授权弹窗 -->
+<view class="login-modal" wx:if="{{showAuthModal}}">
+  <view class="modal-content">
+    <view class="modal-title">欢迎加入</view>
+    <view class="modal-desc">请先完善信息再入座</view>
+    <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+      <image class="avatar-preview" src="{{tempAvatarUrl || '../../images/icons/avatar.png'}}"></image>
+      <text>点击设置头像</text>
+    </button>
+    <input type="nickname" class="nickname-input" placeholder="点击设置昵称" bind:change="onNicknameChange" />
+    <view class="modal-btns">
+      <button type="primary" style="width: 100%" bindtap="confirmAuth">保存并继续</button>
+    </view>
+  </view>
+</view>
+<!-- 游戏结束结算弹窗 -->
+<view class="login-modal" wx:if="{{gameState.game_state.status === 'finished'}}">
+  <view class="modal-content" style="border: 2rpx solid #ffd700;">
+    <view class="modal-title" style="color: #ffd700; font-size: 48rpx;">
+      {{gameState.game_state.winner === 'good' ? '好人胜利 🌕' : '狼人胜利 🌑'}}
+    </view>
+    <scroll-view scroll-y style="max-height: 500rpx; width: 100%; margin: 30rpx 0;">
+      <block wx:for="{{gameState.players}}" wx:key="seat">
+        <view style="display: flex; align-items: center; margin-bottom: 15rpx; background: rgba(255,255,255,0.1); padding: 10rpx; border-radius: 10rpx;">
+          <image src="{{item.avatar_url || '../../images/icons/avatar.png'}}" style="width: 50rpx; height: 50rpx; border-radius: 50%; margin-right: 20rpx;"></image>
+          <view style="flex: 1; font-size: 26rpx;">
+            <text style="color: #aaa; margin-right: 10rpx;">{{item.seat}}号</text>
+            <text>{{item.nickname}}</text>
+          </view>
+          <view style="font-weight: bold; font-size: 26rpx; color: {{item.role === 'werewolf' ? '#ff4d4f' : '#52c41a'}}">
+            {{utils.getRoleName(item.role)}}
+          </view>
+        </view>
+      </block>
+    </scroll-view>
+    <view style="width: 100%; display: flex; justify-content: space-between; margin-top: 30rpx;">
+      <button type="default" style="width: 48%;" bindtap="onBackHome">返回首页</button>
+      <button type="primary" style="width: 48%;" wx:if="{{isCreator}}" bindtap="onRestartGame">
+        重新开始
+      </button>
+    </view>
+  </view>
+</view>
+<!-- 自定义通用弹窗 -->
+<custom-modal show="{{modalConfig.show}}" title="{{modalConfig.title}}" content="{{modalConfig.content}}" showCancel="{{modalConfig.showCancel}}" confirmText="{{modalConfig.confirmText}}" cancelText="{{modalConfig.cancelText}}" confirmColor="{{modalConfig.confirmColor}}" bind:confirm="onModalConfirm" bind:cancel="onModalCancel" />

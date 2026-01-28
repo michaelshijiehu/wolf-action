@@ -1,0 +1,149 @@
+<view class="container">
+  <block wx:if="{{record}}">
+    <view class="detail-card">
+      <view class="detail-header">
+        <text class="record-date">{{record.record_date}}</text>
+        <text class="record-winner {{record.winner === 'good' ? 'winner-good' : 'winner-werewolf'}}">
+          {{record.winner === 'good' ? '好人胜利' : '狼人胜利'}}
+        </text>
+      </view>
+      <view class="section-title">游戏配置</view>
+      <view class="config-grid">
+        <view class="config-item">狼人: {{record.config.roles.werewolf}}</view>
+        <view class="config-item">村民: {{record.config.roles.villager}}</view>
+        <view class="config-item">预言家: {{record.config.roles.seer || 0}}</view>
+        <view class="config-item">女巫: {{record.config.roles.witch || 0}}</view>
+        <view class="config-item">猎人: {{record.config.roles.hunter || 0}}</view>
+        <view class="config-item">白痴: {{record.config.roles.idiot || 0}}</view>
+        <view class="config-item">守卫: {{record.config.roles.guard || 0}}</view>
+        <view class="config-item">丘比特: {{record.config.roles.cupid || 0}}</view>
+      </view>
+      <view class="section-title">玩家详情</view>
+      <view class="player-list-detail">
+        <block wx:for="{{record.players}}" wx:for-item="player" wx:key="seat">
+          <view class="player-item-detail {{player.is_alive ? '' : 'dead'}}">
+            <image class="player-avatar-detail" src="{{player.avatar_url || '../../images/icons/avatar.png'}}"></image>
+            <view class="player-info-detail">
+              <text class="player-name-detail">{{player.nickname}} ({{player.seat}}号)</text>
+              <text class="player-role-detail">{{utils.getRoleName(player.role)}}</text>
+              <text wx:if="{{!player.is_alive}}" class="player-status-dead">
+                {{utils.getDeathReason(player.death_reason)}}
+              </text>
+            </view>
+          </view>
+        </block>
+      </view>
+      <view class="section-title">游戏时间线</view>
+      <view class="timeline-content">
+        <block wx:for="{{record.timeline}}" wx:for-item="event" wx:key="index">
+          <view class="timeline-item">
+            <text class="timeline-time">
+              第{{event.day}}天 {{event.phase === 'night' ? '夜晚' : '白天'}}
+            </text>
+            <text class="timeline-text">{{event.text}}</text>
+            <!-- View Button -->
+            <view wx:if="{{event.relatedVotingRound}}" bindtap="openVotingModal" data-round="{{event.relatedVotingRound}}" style="font-size: 24rpx; color: #ffd700; text-decoration: underline; margin-top: 10rpx;">
+              查看归票图
+            </view>
+          </view>
+        </block>
+        <view wx:if="{{!record.timeline || record.timeline.length === 0}}" class="empty-timeline">
+          暂无时间线记录
+        </view>
+      </view>
+    </view>
+  </block>
+  <block wx:else>
+    <view class="loading-state">
+      <text>加载中...</text>
+    </view>
+  </block>
+  <!-- 归票图弹窗 -->
+  <view class="vote-modal {{showVotingModal ? 'show' : ''}}">
+    <view class="vote-modal-content">
+      <view class="vote-modal-header">
+        <text>📊 归票详情</text>
+        <view class="close-btn" bindtap="closeVotingModal">×</view>
+      </view>
+      <scroll-view scroll-y class="vote-modal-body" wx:if="{{currentSelectedVotingRound}}">
+        <view class="voting-round-title" style="text-align: center; color: #888; font-size: 24rpx; margin-bottom: 20rpx;">
+          {{currentSelectedVotingRound.phase === 'sheriff_election' ? '警长竞选' : (currentSelectedVotingRound.phase === 'day_pk' ? 'PK平票' : '放逐投票')}}
+        </view>
+        <block wx:for="{{currentSelectedVotingRound.enrichedVotes}}" wx:for-item="group" wx:key="targetSeat">
+          <view class="vote-row" style="background: rgba(255,255,255,0.05); padding: 15rpx; margin-bottom: 10rpx; display: flex; justify-content: space-between; align-items: stretch; border-radius: 8rpx;">
+            <!-- Voters -->
+            <view class="voters-list" style="display: flex; flex-wrap: wrap; gap: 8rpx; flex: 1;">
+              <block wx:for="{{group.voters}}" wx:for-item="voter" wx:key="seat">
+                <view class="player-mini" style="display: flex; flex-direction: column; align-items: center; margin-right: 10rpx;">
+                  <image class="avatar-mini" src="{{voter.avatar}}" style="width: 60rpx; height: 60rpx; border-radius: 50%; border: 1px solid #444;"></image>
+                  <text class="seat-mini" style="font-size: 20rpx; color: #aaa;">
+                    {{voter.seat}}号
+                  </text>
+                  <text class="name-mini" style="font-size: 16rpx; color: #666; max-width: 80rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {{voter.nickname}}
+                  </text>
+                </view>
+              </block>
+            </view>
+            <!-- Arrow -->
+            <view class="vote-arrow-box" style="display: flex; align-items: center; padding: 0 15rpx;">
+              <text class="vote-arrow-icon" style="font-size: 28rpx; color: #666;">➔</text>
+            </view>
+            <!-- Target -->
+            <view class="player-mini" style="display: flex; flex-direction: column; align-items: center; align-self: center;">
+              <block wx:if="{{!group.isAbstain}}">
+                <image class="avatar-mini target-border" src="{{group.targetAvatar}}" style="width: 70rpx; height: 70rpx; border-radius: 50%; border: 2rpx solid #ffd700;"></image>
+                <text class="seat-mini target-text" style="font-size: 24rpx; color: #ffd700;">
+                  {{group.targetSeat}}号
+                </text>
+                <text class="name-mini" style="font-size: 20rpx; color: #ccad00; margin-top: 4rpx; max-width: 100rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  {{group.targetName}}
+                </text>
+              </block>
+              <block wx:else>
+                <view class="abstain-box" style="background: #333; color: #aaa; padding: 10rpx 20rpx; border-radius: 8rpx; font-size: 24rpx;">
+                  弃
+                </view>
+              </block>
+            </view>
+          </view>
+        </block>
+      </scroll-view>
+      <button type="primary" style="width: 80%; border-radius: 50rpx; margin-top: 30rpx;" bindtap="closeVotingModal">
+        关闭
+      </button>
+    </view>
+  </view>
+</view>
+<wxs module="utils">
+module.exports.getKeys = function(obj) {
+  if (!obj) return [];
+  return Object.keys(obj).sort(function(a, b) { return parseInt(a) - parseInt(b); });
+}
+module.exports.getRoleName = function(role) {
+  var map = {
+    'werewolf': '狼人',
+    'villager': '村民',
+    'seer': '预言家',
+    'witch': '女巫',
+    'hunter': '猎人',
+    'idiot': '白痴',
+    'guard': '守卫',
+    'cupid': '丘比特',
+    'unknown': '隐藏'
+  };
+  return map[role] || role;
+}
+module.exports.getDeathReason = function(reason) {
+  var map = {
+    'kill': '狼人袭击',
+    'poison': '女巫毒杀',
+    'hunter_shoot': '猎人带走',
+    'love': '情侣殉情',
+    'milk': '奶穿(同守同救)',
+    'vote': '投票放逐'
+  };
+  if (!reason) return '出局';
+  return map[reason] || reason || '不明原因';
+}
+</wxs>

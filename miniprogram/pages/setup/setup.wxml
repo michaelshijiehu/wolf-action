@@ -1,0 +1,122 @@
+<!-- pages/setup/setup.wxml -->
+<view class="container">
+  <view class="section">
+    <view class="section-title">座位总数 (自动计算)</view>
+    <view class="total-seats-display">{{currentCount}} 人</view>
+    <view class="tips">根据下方角色配置自动调整座位数</view>
+  </view>
+  <view class="section">
+    <view class="section-title">快速模板</view>
+    <view class="template-grid">
+      <block wx:for="{{templates}}" wx:key="label">
+        <view class="template-card" bindtap="applyTemplate" data-index="{{index}}">
+          <view class="tpl-label">{{item.label}}</view>
+          <view class="tpl-desc">{{item.desc}}</view>
+        </view>
+      </block>
+    </view>
+  </view>
+  <view class="section">
+    <view class="section-title">基础角色</view>
+    <view class="role-item">
+      <view class="role-name">🐺 狼人</view>
+      <view class="counter">
+        <view class="btn-op {{config.werewolf <= 0 ? 'disabled' : ''}}" bindtap="updateRole" data-role="werewolf" data-op="-1">
+          -
+        </view>
+        <view class="count-val">{{config.werewolf}}</view>
+        <view class="btn-op" bindtap="updateRole" data-role="werewolf" data-op="1">+</view>
+      </view>
+    </view>
+    <view class="role-item">
+      <view class="role-name">🧑‍🌾 村民</view>
+      <view class="counter">
+        <view class="btn-op {{config.villager <= 0 ? 'disabled' : ''}}" bindtap="updateRole" data-role="villager" data-op="-1">
+          -
+        </view>
+        <view class="count-val">{{config.villager}}</view>
+        <view class="btn-op" bindtap="updateRole" data-role="villager" data-op="1">+</view>
+      </view>
+    </view>
+  </view>
+  <view class="section">
+    <view class="section-title">神职角色 (点击开启)</view>
+    <view class="god-tags">
+      <view class="god-tag {{config.seer ? 'active' : ''}}" bindtap="toggleGod" data-role="seer">
+        🔮 预言家
+      </view>
+      <view class="god-tag {{config.witch ? 'active' : ''}}" bindtap="toggleGod" data-role="witch">
+        🧪 女巫
+      </view>
+      <view class="god-tag {{config.hunter ? 'active' : ''}}" bindtap="toggleGod" data-role="hunter">
+        🔫 猎人
+      </view>
+      <view class="god-tag {{config.idiot ? 'active' : ''}}" bindtap="toggleGod" data-role="idiot">
+        🤤 白痴
+      </view>
+      <view class="god-tag {{config.guard ? 'active' : ''}}" bindtap="toggleGod" data-role="guard">
+        🛡️ 守卫
+      </view>
+      <view class="god-tag {{config.cupid ? 'active' : ''}}" bindtap="toggleGod" data-role="cupid">
+        💘 丘比特
+      </view>
+    </view>
+  </view>
+  <view class="section">
+    <view class="section-title">新增神职 (点击开启)</view>
+    <view class="god-tags">
+      <view class="god-tag {{config.knight ? 'active' : ''}}" bindtap="toggleGod" data-role="knight">
+        🗡️ 骑士
+      </view>
+      <view class="god-tag {{config.bear ? 'active' : ''}}" bindtap="toggleGod" data-role="bear">
+        🐻 熊
+      </view>
+      <view class="god-tag {{config.merchant ? 'active' : ''}}" bindtap="toggleGod" data-role="merchant">
+        💰 黑商
+      </view>
+      <view class="god-tag {{config.silencer ? 'active' : ''}}" bindtap="toggleGod" data-role="silencer">
+        🤐 禁言长老
+      </view>
+      <view class="god-tag {{config.gravekeeper ? 'active' : ''}}" bindtap="toggleGod" data-role="gravekeeper">
+        ⚰️ 守墓人
+      </view>
+      <view class="god-tag {{config.magician ? 'active' : ''}}" bindtap="toggleGod" data-role="magician">
+        🎩 魔术师
+      </view>
+      <view class="god-tag {{config.dream_catcher ? 'active' : ''}}" bindtap="toggleGod" data-role="dream_catcher">
+        💤 摄梦人
+      </view>
+    </view>
+  </view>
+  <view class="section wolf-section">
+    <view class="section-title">新增狼队 (点击开启)</view>
+    <view class="god-tags">
+      <view class="god-tag {{config.wolf_king ? 'active' : ''}}" bindtap="toggleGod" data-role="wolf_king">
+        👑 白狼王
+      </view>
+      <view class="god-tag {{config.wolf_beauty ? 'active' : ''}}" bindtap="toggleGod" data-role="wolf_beauty">
+        💄 狼美人
+      </view>
+      <view class="god-tag {{config.hidden_wolf ? 'active' : ''}}" bindtap="toggleGod" data-role="hidden_wolf">
+        🥷 隐狼
+      </view>
+      <view class="god-tag {{config.gargoyle ? 'active' : ''}}" bindtap="toggleGod" data-role="gargoyle">
+        🗿 石像鬼
+      </view>
+    </view>
+  </view>
+  <view class="section">
+    <view class="section-title">其他角色 (点击开启)</view>
+    <view class="god-tags">
+      <view class="god-tag {{config.wild_child ? 'active' : ''}}" bindtap="toggleGod" data-role="wild_child">
+        👶 野孩子
+      </view>
+      <view class="god-tag {{config.bomberman ? 'active' : ''}}" bindtap="toggleGod" data-role="bomberman">
+        💣 炸弹人
+      </view>
+    </view>
+  </view>
+</view>
+<view class="footer">
+  <button class="btn-confirm" bindtap="onConfirm">确认配置</button>
+</view>

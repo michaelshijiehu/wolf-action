@@ -1,0 +1,15 @@
+<!--miniprogram/pages/feedback/feedback.wxml-->
+<view class="container">
+  <view class="form-group">
+    <view class="label">反馈内容</view>
+    <textarea class="feedback-input" placeholder="请输入您遇到的问题或建议，我们会认真倾听..." placeholder-class="placeholder" maxlength="500" bindinput="onContentInput" value="{{content}}"></textarea>
+    <view class="word-count">{{content.length}}/500</view>
+  </view>
+
+  <view class="form-group">
+    <view class="label">联系方式 (可选)</view>
+    <input class="contact-input" placeholder="手机号/微信号/邮箱，方便我们联系您" placeholder-class="placeholder" bindinput="onContactInput" value="{{contact}}" />
+  </view>
+
+  <button class="submit-btn" disabled="{{!content.trim()}}" bindtap="submit">提交反馈</button>
+</view>

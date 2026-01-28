@@ -1,0 +1,63 @@
+<!--index.wxml-->
+<view class="container">
+  <view class="title">狼人杀 - 程序法官</view>
+  <view class="sub-title">线下聚会 · 面对面法官助手</view>
+
+  <view class="join-section">
+    <view class="verification-code-container">
+      <input wx:for="{{4}}" wx:key="index"
+             class="code-input"
+             type="number"
+             maxlength="1"
+             value="{{roomIdInputs[index]}}"
+             data-index="{{index}}"
+             bindinput="onCodeInput"
+             focus="{{focusIndex === index}}"
+             />
+    </view>
+    <button class="join-btn" loading="{{joinLoading}}" bindtap="onJoinBtnClick">
+      加入房间
+    </button>
+  </view>
+
+  <view class="divider-text">或</view>
+
+  <button class="create-btn" loading="{{createLoading}}" bindtap="onCreateBtnClick">
+    创建新房间
+  </button>
+</view>
+
+<!-- 统一授权弹窗 -->
+<view class="login-modal" wx:if="{{showAuthModal}}">
+  <view class="modal-content">
+    <view class="modal-title">完善您的信息</view>
+    <view class="modal-desc">请设置头像和昵称以继续</view>
+    
+    <button class="avatar-wrapper" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+      <image class="avatar-preview" src="{{tempAvatarUrl || '../../images/icons/avatar.png'}}"></image>
+      <view class="avatar-tip">点击设置头像</view>
+    </button> 
+    
+    <input type="nickname" class="nickname-input" placeholder="点击自动填写昵称" bind:change="onNicknameChange" />
+    
+    <view class="privacy-tip">
+      点击确认即代表您同意《用户信息保护协议》
+    </view>
+
+    <view class="modal-actions">
+      <button class="modal-btn cancel" bindtap="closeAuthModal">取消</button>
+      <button class="modal-btn confirm" bindtap="confirmAuth">确认</button>
+    </view>
+  </view>
+</view>
+
+<!-- 自定义重连弹窗 -->
+<custom-modal 
+  show="{{showReconnectModal}}" 
+  title="重连提示" 
+  content="{{reconnectContent}}" 
+  confirmText="重连" 
+  cancelText="放弃" 
+  bind:confirm="onReconnectConfirm" 
+  bind:cancel="onReconnectCancel" 
+/>

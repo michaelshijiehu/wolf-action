@@ -1,0 +1,172 @@
+/**index.wxss**/
+page {
+  background-color: #f8f8f8;
+}
+
+.container {
+  padding: 0 40rpx;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  letter-spacing: 2rpx;
+}
+
+.sub-title {
+  font-size: 30rpx;
+  color: #999;
+  margin-bottom: 80rpx;
+}
+
+.join-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.verification-code-container {
+  display: flex;
+  justify-content: center;
+  gap: 20rpx;
+  margin-bottom: 40rpx;
+}
+
+.code-input {
+  width: 100rpx;
+  height: 120rpx;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12rpx;
+  text-align: center;
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #333;
+  box-shadow: 0 5rpx 15rpx rgba(0,0,0,0.05);
+}
+
+.join-btn {
+  background-color: #3a3a45 !important;
+  color: #fff !important;
+  font-weight: bold;
+  width: 500rpx !important;
+  height: 100rpx !important;
+  line-height: 100rpx !important;
+  border-radius: 50rpx !important;
+  font-size: 34rpx !important;
+  box-shadow: 0 10rpx 25rpx rgba(0, 0, 0, 0.2);
+}
+
+.divider-text {
+  color: #ccc;
+  font-size: 28rpx;
+  margin: 30rpx 0;
+}
+
+
+.create-btn {
+  background-color: #ffd700 !important;
+  color: #000 !important;
+  font-weight: bold;
+  width: 500rpx !important;
+  height: 110rpx !important;
+  line-height: 110rpx !important;
+  border-radius: 55rpx !important;
+  font-size: 36rpx !important;
+  box-shadow: 0 15rpx 30rpx rgba(255, 214, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-top: 20rpx;
+}
+
+.create-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 5rpx 15rpx rgba(255, 214, 0, 0.2);
+}
+
+.records-btn {
+  background-color: transparent !important;
+  color: #999 !important;
+  font-weight: normal;
+  width: 500rpx !important;
+  height: 90rpx !important;
+  line-height: 90rpx !important;
+  border-radius: 45rpx !important;
+  font-size: 30rpx !important;
+  box-shadow: none;
+  margin-top: 40rpx;
+  border: 1px solid #e0e0e0;
+}
+
+.records-btn:active {
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+/* 授权弹窗样式 */
+.login-modal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+  background: #fff; width: 80%; border-radius: 20rpx; padding: 40rpx;
+  display: flex; flex-direction: column; align-items: center;
+}
+.modal-title { font-size: 34rpx; font-weight: bold; margin-bottom: 20rpx; color: #333; }
+.modal-desc { font-size: 26rpx; color: #888; margin-bottom: 40rpx; }
+
+.avatar-wrapper {
+  padding: 0; width: 160rpx !important; height: 160rpx !important;
+  border-radius: 20rpx; margin-bottom: 40rpx; background-color: #f0f0f0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative;
+}
+.avatar-preview { width: 160rpx; height: 160rpx; border-radius: 20rpx; }
+.avatar-tip {
+  position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.5);
+  color: #fff; font-size: 20rpx; padding: 4rpx 0; text-align: center;
+}
+
+.nickname-input {
+  width: 100%; height: 90rpx; background: #f5f5f5; color: #333;
+  border-radius: 12rpx; padding: 0 30rpx; margin-bottom: 20rpx; text-align: center;
+  font-size: 30rpx;
+}
+
+.privacy-tip {
+  font-size: 22rpx;
+  color: #999;
+  margin-bottom: 40rpx;
+}
+
+.modal-actions { width: 100%; display: flex; justify-content: space-between; }
+.modal-btn {
+  width: 45% !important; height: 80rpx; line-height: 80rpx; font-size: 28rpx;
+  border-radius: 40rpx; border: none; margin: 0;
+}
+.modal-btn.cancel { background: #eee; color: #666; }
+.modal-btn.confirm { background: #ffd700; color: #000; font-weight: bold; }
+
+.footer-links {
+  margin-top: 80rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.rules-link {
+  font-size: 28rpx;
+  color: #007aff;
+  text-decoration: underline;
+}
