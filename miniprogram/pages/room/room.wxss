@@ -1022,6 +1022,19 @@
   flex-shrink: 0;
 }
 
+.close-btn {
+  font-size: 50rpx;
+  color: #ccc;
+  padding: 20rpx 30rpx; /* Increase touch area */
+  margin-right: -20rpx; /* Compensate for padding */
+  line-height: 1;
+}
+
+.close-btn:active {
+  color: #fff;
+  transform: scale(0.9);
+}
+
 .log-content {
   flex: 1;
   height: 0;

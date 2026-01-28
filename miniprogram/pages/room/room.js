@@ -179,7 +179,7 @@ Page({
     if (this.data.isMyTurn) {
       const gs = this.data.gameState;
       const subPhase = gs ? gs.game_state.sub_phase : '';
-      
+
       // Auto-abstain for voting phases on timeout
       if (['voting', 'pk_voting', 'sheriff_voting'].includes(subPhase)) {
         // Fix: If already voted, do NOT auto-abstain
@@ -325,26 +325,26 @@ Page({
         const isNewSubPhase = !lastGameState || gameState.game_state.sub_phase !== lastGameState.game_state.sub_phase;
 
         if (instructionAudio && isNewSubPhase) {
-           const keys = Array.isArray(instructionAudio) ? instructionAudio : (instructionAudio.keys || []);
-           if (keys.length > 0) {
-             console.log('[AUDIO] Playing from instruction:', keys);
-             this.playAudioKeys(keys);
-           } else {
-             this.triggerCountdown(gameState);
-           }
+          const keys = Array.isArray(instructionAudio) ? instructionAudio : (instructionAudio.keys || []);
+          if (keys.length > 0) {
+            console.log('[AUDIO] Playing from instruction:', keys);
+            this.playAudioKeys(keys);
+          } else {
+            this.triggerCountdown(gameState);
+          }
         } else if (!instructionAudio) {
-           // Fallback to legacy getAudioQueue if no instruction audio (should rarely happen now)
-           try {
-             const res = await wx.cloud.callFunction({
-               name: 'quickstartFunctions',
-               data: { type: 'getAudioQueue', gameState: gameState, lastGameState: lastGameState }
-             });
-             if (res.result && res.result.success && res.result.keys && res.result.keys.length > 0) {
-               this.playAudioKeys(res.result.keys);
-             } else if (isNewSubPhase) {
-               this.triggerCountdown(gameState);
-             }
-           } catch (e) { console.error("Failed to get audio queue", e); if (isNewSubPhase) this.triggerCountdown(gameState); }
+          // Fallback to legacy getAudioQueue if no instruction audio (should rarely happen now)
+          try {
+            const res = await wx.cloud.callFunction({
+              name: 'quickstartFunctions',
+              data: { type: 'getAudioQueue', gameState: gameState, lastGameState: lastGameState }
+            });
+            if (res.result && res.result.success && res.result.keys && res.result.keys.length > 0) {
+              this.playAudioKeys(res.result.keys);
+            } else if (isNewSubPhase) {
+              this.triggerCountdown(gameState);
+            }
+          } catch (e) { console.error("Failed to get audio queue", e); if (isNewSubPhase) this.triggerCountdown(gameState); }
         }
       } else {
         this.stopCountdownTimer();
@@ -361,7 +361,7 @@ Page({
       // Mask role during 'game_welcome' to prevent early peek
       myRole = (subPhase === 'game_welcome') ? 'unknown' : me.role;
       myRoleState = me.role_state || {};
-      
+
       // Extract Witch Info
       if (myRole === 'witch' && instructions.witch_info) {
         witchKillTarget = instructions.witch_info.killTarget;
@@ -476,7 +476,7 @@ Page({
         if (this.voteResultTimer) clearTimeout(this.voteResultTimer);
         this.voteResultTimer = setTimeout(() => {
           this.setData({ showVoteResultModal: false });
-        }, 15000); // Extended to 15s to match phase duration
+        }, 8000); // 8s per user request
       }
     }
 
@@ -935,7 +935,7 @@ Page({
   async onConfirmRole() {
     if (this.data.hasConfirmedRole) return;
     this.setData({ hasConfirmedRole: true }); // Optimistic UI update
-    
+
     try {
       const res = await wx.cloud.callFunction({
         name: 'quickstartFunctions',
