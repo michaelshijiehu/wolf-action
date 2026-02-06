@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "狼人杀 - 程序法官",
+  "usingComponents": {
+    "custom-modal": "/components/custom-modal/custom-modal"
+  }
+}

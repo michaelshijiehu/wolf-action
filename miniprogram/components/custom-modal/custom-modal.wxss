@@ -1,0 +1,78 @@
+/* miniprogram/components/custom-modal/custom-modal.wxss */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+}
+
+.modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-container {
+  width: 600rpx;
+  background: #1a1a20;
+  border-radius: 24rpx;
+  padding: 40rpx;
+  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.6);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  transform: scale(0.9);
+  transition: transform 0.3s;
+}
+
+.modal-overlay.show .modal-container {
+  transform: scale(1);
+}
+
+.modal-title {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #ffd700;
+  text-align: center;
+  margin-bottom: 30rpx;
+}
+
+.modal-content {
+  font-size: 28rpx;
+  color: #ccc;
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 50rpx;
+  white-space: pre-wrap;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 30rpx;
+}
+
+.modal-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  border-radius: 40rpx;
+  font-size: 30rpx;
+  font-weight: bold;
+}
+
+.modal-btn.cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: #aaa;
+}
+
+.modal-btn.confirm {
+  background: linear-gradient(135deg, #ffd700, #ffae00);
+  color: #000;
+  box-shadow: 0 4rpx 15rpx rgba(255, 174, 0, 0.3);
+}

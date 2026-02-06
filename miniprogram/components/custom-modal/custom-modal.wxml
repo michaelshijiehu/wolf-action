@@ -1,0 +1,11 @@
+<!--miniprogram/components/custom-modal/custom-modal.wxml-->
+<view class="modal-overlay {{show ? 'show' : ''}}" catchtouchmove="preventTouchMove">
+  <view class="modal-container">
+    <view class="modal-title" wx:if="{{title}}">{{title}}</view>
+    <view class="modal-content">{{content}}</view>
+    <view class="modal-footer">
+      <view class="modal-btn cancel" bindtap="onCancel" wx:if="{{showCancel}}">{{cancelText}}</view>
+      <view class="modal-btn confirm" bindtap="onConfirm" style="{{confirmColor ? 'background:' + confirmColor + '; color: #fff; border:none;' : ''}}">{{confirmText}}</view>
+    </view>
+  </view>
+</view>

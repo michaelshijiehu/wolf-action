@@ -1,0 +1,128 @@
+.container {
+  background-color: #0a0a0c;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+}
+
+.tabs {
+  display: flex;
+  background-color: #1a1a20;
+  padding: 30rpx 20rpx;
+  border-bottom: 1rpx solid #333;
+  justify-content: space-between;
+}
+
+.tab {
+  flex: none;
+  width: 210rpx; /* 固定宽度，确保间距 */
+  text-align: center;
+  font-size: 26rpx;
+  color: #888;
+  padding: 15rpx 0;
+  border-radius: 30rpx;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.tab.active {
+  color: #000;
+  font-weight: bold;
+  background-color: #ffd700;
+  box-shadow: 0 4rpx 15rpx rgba(255, 215, 0, 0.3);
+}
+
+/* 移除之前的下划线样式 */
+.tab.active::after {
+  display: none;
+}
+
+.content-area {
+  flex: 1;
+  padding: 30rpx;
+  box-sizing: border-box;
+}
+
+.tab-content {
+  padding-bottom: 50rpx;
+}
+
+.section {
+  margin-bottom: 40rpx;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 25rpx;
+  border-radius: 15rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #ffd700;
+  margin-bottom: 20rpx;
+  border-left: 6rpx solid #ffd700;
+  padding-left: 15rpx;
+}
+
+.text {
+  font-size: 28rpx;
+  color: #ccc;
+  line-height: 1.6;
+  margin-bottom: 15rpx;
+}
+
+.bullet {
+  font-size: 28rpx;
+  color: #bbb;
+  margin-bottom: 10rpx;
+  padding-left: 30rpx;
+  position: relative;
+}
+
+.bullet::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #ffd700;
+}
+
+.step {
+  font-size: 28rpx;
+  color: #bbb;
+  margin-bottom: 15rpx;
+}
+
+/* 角色卡片样式 */
+.role-card {
+  background: #1a1a20;
+  border: 1rpx solid #333;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 4rpx 15rpx rgba(0,0,0,0.3);
+}
+
+.role-header {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #eee;
+  margin-bottom: 15rpx;
+  display: flex;
+  align-items: center;
+}
+
+.role-desc {
+  font-size: 26rpx;
+  color: #aaa;
+  line-height: 1.5;
+}
+
+.highlight {
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.highlight-sub {
+  color: #ff85c0;
+  font-weight: bold;
+}
