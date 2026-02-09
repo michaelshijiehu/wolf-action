@@ -238,6 +238,7 @@ const strategies = {
     [ROLE_PHASES.SHERIFF_VOTING]: (ctx) => {
         const cands = ctx.game_state.sheriff_candidate_seats || [];
         ctx.bots.forEach(b => {
+            if (!b.is_alive || b.death_reason) return;
             if (!cands.includes(b.seat)) {
                 if (ctx.roomDoc.current_round_actions?.silencer_silence === b.seat) return;
                 const t = rnd(cands);
