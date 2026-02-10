@@ -27,32 +27,55 @@ module.exports = (ctx) => ({
   },
 
   joinGame: async (ev) => {
-    let p = ctx.roomDoc.players;
-    p.forEach(player => {
-      if (player.openid === ctx.wxCtx.OPENID) {
-        player.openid = '';
-        player.nickname = `玩家${player.seat}`;
-        player.avatar_url = '';
-      }
-    });
+    const p = ctx.roomDoc.players;
+    if (ctx.roomDoc.game_state.status !== 'waiting') {
+      return { success: false, message: '游戏已开始，无法换座' };
+    }
     const idx = p.findIndex(x => x.seat === ev.seat);
     if (idx === -1) return { success: false, message: '该座位不存在' };
-    p[idx].openid = ctx.wxCtx.OPENID;
-    p[idx].nickname = ev.userInfo.nickName;
-    p[idx].avatar_url = ev.userInfo.avatarUrl;
-    await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({ data: { players: p } });
+    if (p[idx].openid && p[idx].openid !== ctx.wxCtx.OPENID) {
+      return { success: false, message: '该座位已被占用' };
+    }
+
+    const updatedPlayers = p.map(player => {
+      if (player.openid === ctx.wxCtx.OPENID) {
+        return {
+          ...player,
+          openid: '',
+          nickname: `玩家${player.seat}`,
+          avatar_url: ''
+        };
+      }
+      return { ...player };
+    });
+
+    updatedPlayers[idx].openid = ctx.wxCtx.OPENID;
+    updatedPlayers[idx].nickname = ev.userInfo.nickName;
+    updatedPlayers[idx].avatar_url = ev.userInfo.avatarUrl;
+    await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({ data: { players: updatedPlayers } });
     return { success: true };
   },
 
   startGame: async (ev) => {
+    if (ctx.roomDoc._openid !== ctx.wxCtx.OPENID) return { success: false, message: '仅房主可开始游戏' };
+    if (ctx.roomDoc.game_state.status !== 'waiting') return { success: false, message: '当前状态不可开始游戏' };
+
     const res = await ctx.db.collection('game_rooms').where({ roomId: ctx.eventRoomId }).get();
     const room = res.data[0];
     const players = room.players;
     const real = players.filter(p => p.openid);
-    const roles = ev.config.roles;
+    if (real.length < 6) return { success: false, message: '至少需要 6 名玩家才能开始游戏' };
+
+    const roles = (ev.config && ev.config.roles) || (room.config && room.config.roles) || {};
     let pool = [];
     for (const [role, count] of Object.entries(roles)) {
+      if (!Number.isInteger(count) || count < 0) {
+        return { success: false, message: `角色 ${role} 配置非法` };
+      }
       for (let i = 0; i < count; i++) pool.push(role);
+    }
+    if (pool.length !== real.length) {
+      return { success: false, message: '角色数量必须与实际玩家数一致' };
     }
     pool = pool.slice(0, real.length).sort(() => Math.random() - 0.5);
     let pi = 0;
