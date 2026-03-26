@@ -125,19 +125,25 @@ module.exports.isWolfRole = function(role) {
 module.exports.canVote = function(player, gameState) {
   if (!player.is_alive) return false;
   var subPhase = gameState.sub_phase;
-  if (subPhase === 'sheriff_voting' || subPhase === 'sheriff_pk_voting') {
+  if (subPhase === 'sheriff_voting' || subPhase === 'sheriff_pk_voting' || subPhase === 'sheriff_election' || subPhase === 'sheriff_pk') {
     // 竞选者和PK者不能投票
     var candidates = gameState.sheriff_candidate_seats || [];
     var pkCandidates = gameState.pk_candidates || [];
-    if (subPhase === 'sheriff_voting') return candidates.indexOf(player.seat) === -1;
+    if (subPhase === 'sheriff_voting' || subPhase === 'sheriff_election') return candidates.indexOf(player.seat) === -1;
     return pkCandidates.indexOf(player.seat) === -1;
   }
-  if (subPhase === 'pk_voting') {
+  if (subPhase === 'pk_voting' || subPhase === 'day_pk') {
     // PK者不能投票
     var pkCandidates = gameState.pk_candidates || [];
     return pkCandidates.indexOf(player.seat) === -1;
   }
   return true; // 默认存活即可投票
+}
+module.exports.getOtherLover = function(lovers, mySeat) {
+  if (!lovers || lovers.length < 2) return '?';
+  if (lovers[0] == mySeat) return lovers[1];
+  if (lovers[1] == mySeat) return lovers[0];
+  return '?';
 }
 </wxs>
 <view class="not-found-container" wx:if="{{roomNotFound}}">
@@ -230,7 +236,7 @@ module.exports.canVote = function(player, gameState) {
         <view class="seats-wrapper">
           <block wx:for="{{gameState.players}}" wx:key="seat">
             <view class="seat-item {{((!utils.shouldHideDeath(gameState.game_state.phase, gameState.game_state.sub_phase)) && (!item.is_alive || (isJudge && utils.isDead(item, gameState.game_state.last_night_deaths)))) ? 'dead' : ''}}" style="{{utils.getSeatStyle(index, gameState.players.length, isTheaterMode)}}" bindtap="onSeatTap" data-seat="{{item.seat}}" data-occupied="{{!!item.openid}}">
-              <view class="avatar-box {{mySeat === item.seat ? 'me' : ''}} {{isJudge && (gameState.current_round_actions.role_confirmations[item.openid]) ? 'is-confirmed' : ''}} {{isJudge && (gameState.current_round_actions.werewolf_votes[item.seat] || gameState.current_round_actions[item.role + '_acted']) ? 'is-acted' : ''}} {{isVotingPhase && utils.canVote(item, gameState.game_state) ? 'is-voter' : ''}} {{(gameState.game_state.sub_phase === 'werewolf_phase' && utils.isWolfRole(item.role) && item.is_alive && (utils.isWolfRole(myRole) || isJudge)) ? 'wolf-halo' : ''}}">
+              <view class="avatar-box {{mySeat === item.seat ? 'me' : ''}} {{isJudge && (gameState.current_round_actions.role_confirmations[item.openid]) ? 'is-confirmed' : ''}} {{isJudge && (gameState.current_round_actions.werewolf_votes[item.seat] || gameState.current_round_actions[item.role + '_acted']) ? 'is-acted' : ''}} {{isVotingPhase && utils.canVote(item, gameState.game_state) && !votedSeatMap[item.seat] ? 'is-voter' : ''}} {{isVotingPhase && votedSeatMap[item.seat] ? 'is-voted' : ''}} {{(gameState.game_state.sub_phase === 'werewolf_phase' && utils.isWolfRole(item.role) && item.is_alive && (utils.isWolfRole(myRole) || isJudge)) ? 'wolf-halo' : ''}}">
                 <image class="avatar-img" src="{{item.avatar_url}}" wx:if="{{item.avatar_url}}"></image>
                 <view class="avatar-empty" wx:else>{{item.seat}}</view>
                 <!-- 确认状态 (上帝视角) -->
@@ -238,7 +244,9 @@ module.exports.canVote = function(player, gameState) {
                 <!-- 行动状态 (上帝视角) -->
                 <view class="status-dot" wx:if="{{isJudge && gameState.game_state.phase === 'night' && (gameState.current_round_actions.werewolf_votes[item.seat] || gameState.current_round_actions[item.role + '_acted'])}}">⚡</view>
                 <!-- 投票状态 (上帝视角) -->
-                <view class="status-dot" wx:if="{{isJudge && isVotingPhase && (gameState.current_round_actions.day_votes[item.seat] || gameState.current_round_actions.sheriff_votes[item.seat])}}">🗳️</view>
+                <view class="status-dot" wx:if="{{isJudge && isVotingPhase && (gameState.current_round_actions.day_votes[item.seat] !== undefined || gameState.current_round_actions.sheriff_votes[item.seat] !== undefined)}}">🗳️</view>
+                <!-- 个人投票已提交提示 (全员可见) -->
+                <view class="status-dot voted-mark" wx:if="{{isVotingPhase && votedSeatMap[item.seat]}}">✅</view>
                 <!-- 座位号标识 (有头像时显示) -->
                 <view class="seat-badge" wx:if="{{item.avatar_url}}">{{item.seat}}</view>
                 <!-- 身份标识：仅在游戏开始后显示，且需满足权限 -->
@@ -288,7 +296,7 @@ module.exports.canVote = function(player, gameState) {
                   🍼
                 </view>
                 <!-- New: Witch View - Kill Target -->
-                <view class="witch-kill-indicator" wx:if="{{myRole === 'witch' && gameState.game_state.sub_phase === 'witch_phase' && witchKillTarget === item.seat}}" style="position: absolute; top: -10rpx; left: 50%; transform: translateX(-50%); background: #ff4d4f; color: #fff; font-size: 20rpx; padding: 2rpx 12rpx; border-radius: 10rpx; font-weight: bold; z-index: 100; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.5); white-space: nowrap;">
+                <view class="witch-kill-indicator" wx:if="{{myRole === 'witch' && !myRoleState.witch_save_used && gameState.game_state.sub_phase === 'witch_phase' && witchKillTarget === item.seat}}" style="position: absolute; top: -10rpx; left: 50%; transform: translateX(-50%); background: #ff4d4f; color: #fff; font-size: 20rpx; padding: 2rpx 12rpx; border-radius: 10rpx; font-weight: bold; z-index: 100; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.5); white-space: nowrap;">
                   🚨 昨晚被杀
                 </view>
                 <!-- 情侣标志 (仅法官可见，玩家移动到身份卡内) -->
@@ -405,7 +413,7 @@ module.exports.canVote = function(player, gameState) {
             {{item.seat}}号: {{item.isBad ? '黑人 (狼人) 🌑' : '白人 (好人) 🌕'}}
           </view>
         </view>
-        <button class="skip-btn" bindtap="onConfirmAction" wx:if="{{isMyTurn}}">确定/空验</button>
+        <button class="skip-btn" bindtap="onConfirmAction" wx:if="{{isMyTurn}}" style="min-width: 200rpx; white-space: nowrap;">{{myVoteTarget ? '确定' : '确定/空验'}}</button>
       </view>
     </view>
     <!-- 2. 守卫专有面板 -->
@@ -419,7 +427,7 @@ module.exports.canVote = function(player, gameState) {
           </text>
           <text wx:else>上轮未进行守护</text>
         </view>
-        <button class="skip-btn" bindtap="onConfirmAction" wx:if="{{isMyTurn}}">确定/空守</button>
+        <button class="skip-btn" bindtap="onConfirmAction" wx:if="{{isMyTurn}}" style="min-width: 200rpx; white-space: nowrap;">{{myVoteTarget ? '确定' : '确定/空守'}}</button>
       </view>
     </view>
     <!-- 3. 女巫专有面板 -->
@@ -469,25 +477,51 @@ module.exports.canVote = function(player, gameState) {
             <text wx:else style="color: #666; font-size: 22rpx;">已使用</text>
           </view>
         </view>
-        <button class="skip-btn skip-btn-danger" bindtap="onConfirmAction" wx:if="{{isMyTurn}}">确定/结束</button>
+        <button class="skip-btn {{(gameState.current_round_actions.witch_action.save || witchPoisonTarget) ? 'skip-btn-danger' : ''}}" bindtap="onConfirmAction" wx:if="{{isMyTurn}}" style="min-width: 200rpx; white-space: nowrap;">
+          {{(gameState.current_round_actions.witch_action.save || witchPoisonTarget) ? '确定/结束' : '跳过'}}
+        </button>
       </view>
     </view>
     <!-- 4. 警长竞选面板 -->
-    <view class="witch-panel" wx:elif="{{gameState.game_state.current_instruction.actionPanel === 'sheriff_nomination' && !isJudge}}">
+    <view class="witch-panel" wx:elif="{{(gameState.game_state.sub_phase === 'sheriff_nomination' || (gameState.game_state.sub_phase === 'sheriff_speech' && isSheriffCandidate)) && !isJudge}}">
       <view class="witch-card" style="border-color: #ffd700;">
-        <view class="panel-title" style="color: #ffd700;">警长竞选</view>
-        <view class="tips" style="color: #888; font-size: 22rpx;">想要竞选警长的玩家请上警</view>
+        <view class="panel-title" style="color: #ffd700;">
+          {{gameState.game_state.sub_phase === 'sheriff_nomination' ? '警长竞选' : '竞选发言中'}}
+        </view>
+        <view class="tips" style="color: #888; font-size: 22rpx;">
+          {{gameState.game_state.sub_phase === 'sheriff_nomination' ? '想要竞选警长的玩家请上警' : '正在轮流发言，候选人可随时退水'}}
+        </view>
         <view class="nominate-row" style="display: flex; gap: 20rpx; justify-content: center; margin: 16rpx 0;">
-          <button bindtap="onSheriffJoin" data-join="{{!isSheriffCandidate}}" type="{{isSheriffCandidate ? 'warn' : 'primary'}}" size="mini" style="min-width: 200rpx; font-weight: bold; border-radius: 30rpx;">
-            {{isSheriffCandidate ? '🔙 退水 (已上警)' : '✋ 我要上警'}}
-          </button>
+          <!-- 报名阶段：可上警/退水 -->
+          <block wx:if="{{gameState.game_state.sub_phase === 'sheriff_nomination'}}">
+            <button bindtap="onSheriffJoin" data-join="{{!isSheriffCandidate}}" type="{{isSheriffCandidate ? 'warn' : 'primary'}}" size="mini" style="min-width: 200rpx; font-weight: bold; border-radius: 30rpx;">
+              {{isSheriffCandidate ? '🔙 退水 (已上警)' : '✋ 我要上警'}}
+            </button>
+          </block>
+          <!-- 发言阶段：仅限候选人退水 -->
+          <block wx:else>
+            <button bindtap="onSheriffJoin" data-join="{{false}}" type="warn" size="mini" style="min-width: 200rpx; font-weight: bold; border-radius: 30rpx;">
+              🔙 我要退水
+            </button>
+          </block>
         </view>
         <view class="tips" style="font-size: 24rpx; color: #ffd700;">
           当前候选: {{utils.formatCandidateList(gameState.game_state.sheriff_candidate_seats)}}
         </view>
       </view>
     </view>
-    <!-- 5. 通用/其他行动面板 (投票, 狼人, 丘比特, 猎人, 移交警徽 等) -->
+    <!-- 5. 情侣确认面板 -->
+    <view class="witch-panel" wx:elif="{{gameState.game_state.current_instruction.actionPanel === 'lover_confirm' && isMyTurn}}">
+      <view class="witch-card" style="border-color: #ff85c0;">
+        <view class="panel-title" style="color: #ff85c0;">情侣确认</view>
+        <view class="tips">请记住您的另一半</view>
+        <view style="color: #ff4d4f; font-weight: bold; font-size: 32rpx; margin: 20rpx 0; text-align: center;">
+          您的另一半是：{{utils.getOtherLover(gameState.game_state.lovers, mySeat)}}号
+        </view>
+        <button class="skip-btn" bindtap="onConfirmAction" style="min-width: 200rpx; white-space: nowrap;">确定</button>
+      </view>
+    </view>
+    <!-- 6. 通用/其他行动面板 (投票, 狼人, 丘比特, 猎人, 移交警徽 等) -->
     <view class="witch-panel" wx:elif="{{gameState.game_state.current_instruction.actionPanel !== 'none' && isMyTurn}}">
       <view class="witch-card" style="border-color: {{gameState.game_state.current_instruction.color || '#ffd700'}};">
         <view class="panel-title" style="color: {{gameState.game_state.current_instruction.color || '#ffd700'}};">
@@ -506,7 +540,7 @@ module.exports.canVote = function(player, gameState) {
                 {{item.voterName}} 🔪 {{item.targetSeat}}号
               </view>
             </view>
-            <button class="skip-btn" style="margin-top: 20rpx; width: 80%; background: #ff4d4f !important;" bindtap="onConfirmAction" wx:if="{{isMyTurn && wolfKillTarget}}">
+            <button class="skip-btn" style="margin-top: 20rpx; width: 280rpx; background: #ff4d4f !important; white-space: nowrap;" bindtap="onConfirmAction" wx:if="{{isMyTurn && isWolfConsensusReached}}">
               确认刀人
             </button>          </block>
           <block wx:elif="{{gameState.game_state.current_instruction.actionPanel === 'cupid'}}">
@@ -529,7 +563,7 @@ module.exports.canVote = function(player, gameState) {
             {{myRole === 'hunter' ? (gameState.game_state.current_instruction.actionPanel === 'hunter_confirm' ? '我的状态: ' + (myRoleState.is_poisoned ? '不可开枪' : '可开枪') : '请选择带走目标') : '请等待猎人行动'}}
           </block>
         </view>
-        <button class="skip-btn {{(gameState.game_state.current_instruction.actionPanel === 'vote_exile' || gameState.game_state.current_instruction.actionPanel === 'hunter_action' || gameState.game_state.current_instruction.actionPanel === 'sheriff_handover') ? 'skip-btn-danger' : ''}}" wx:if="{{gameState.game_state.current_instruction.actionBtn}}" bindtap="onConfirmAction">
+        <button class="skip-btn {{(gameState.game_state.current_instruction.actionPanel === 'vote_exile' || gameState.game_state.current_instruction.actionPanel === 'hunter_action' || gameState.game_state.current_instruction.actionPanel === 'sheriff_handover') ? 'skip-btn-danger' : ''}}" style="min-width: 200rpx; white-space: nowrap;" wx:if="{{gameState.game_state.current_instruction.actionBtn}}" bindtap="onConfirmAction">
           {{gameState.game_state.current_instruction.actionBtn}}
         </button>
       </view>

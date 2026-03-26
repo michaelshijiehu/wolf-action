@@ -40,10 +40,14 @@ module.exports = Behavior({
           if (res.confirm) {
             wx.showLoading({ title: '自爆中...' });
             wx.cloud.callFunction({ name: 'quickstartFunctions', data: { type: 'wolfExplode', roomId: this.data.roomId } })
-              .then(() => {
-                wx.showToast({ title: '已自爆', icon: 'success' });
+              .then(res => {
+                if (res.result && res.result.success) {
+                  wx.showToast({ title: '已自爆', icon: 'success' });
+                } else {
+                  wx.showToast({ title: (res.result && res.result.message) || '自爆失败', icon: 'none' });
+                }
               })
-              .catch(e => { console.error(e); })
+              .catch(e => { console.error(e); wx.showToast({ title: '调用失败', icon: 'none' }); })
               .finally(() => { wx.hideLoading(); });
           }
         }

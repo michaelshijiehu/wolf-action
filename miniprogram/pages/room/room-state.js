@@ -13,7 +13,7 @@ const WATCH_FIELDS = [
   'isCreator', 'isJudge', 'markOptions', 'enrichedVotingHistory',
   'wolfConsensusTarget', 'showVoteResultModal', 'currentVoteResult',
   'isSheriffCandidate', 'judgeSummary', 'hasConfirmedRole',
-  'confirmedCount', 'tickerLogs'
+  'confirmedCount', 'tickerLogs', 'votedSeatMap'
 ];
 
 module.exports = Behavior({
@@ -77,6 +77,7 @@ module.exports = Behavior({
      * 处理等待状态
      */
     handleWaitingState(gameState) {
+      this.lastSheriffNotifyKey = null;
       if (this.data.roomId) {
         try {
           wx.removeStorageSync(`player_marks_${this.data.roomId}`);
@@ -107,7 +108,7 @@ module.exports = Behavior({
     handleDealCards() {
       const { gameState, showRoleCard, isJudge } = this.data;
       if (gameState?.game_state.sub_phase === 'deal_cards' && !showRoleCard && !isJudge) {
-        this.toggleRoleCard(8000);
+        this.toggleRoleCard(10000);
       }
     },
 
@@ -194,15 +195,37 @@ module.exports = Behavior({
 
       // 计算角色相关信息
       const roleInfo = this.calculateRoleInfo(me, gameState, phase, subPhase);
-      const actionInfo = this.calculateActionInfo(gameState, mySeat, phase, subPhase, roleInfo.myRole, isJudge);
+      const actionInfo = this.calculateActionInfo(
+        gameState,
+        mySeat,
+        phase,
+        subPhase,
+        roleInfo.myRole,
+        roleInfo.myRoleState,
+        isJudge
+      );
 
       // 处理回合定时器
       this.handleTurnTimer(roleInfo.isMyTurn, lastGameState, gameState);
 
       // 检测警长变动并提醒
       if (lastGameState && gameState.game_state.sheriff_seat !== lastGameState.game_state.sheriff_seat) {
-        if (gameState.game_state.sheriff_seat) {
-          this.notifySheriffBadge(gameState.game_state.sheriff_seat);
+        const prevSheriff = lastGameState.game_state.sheriff_seat || null;
+        const nextSheriff = gameState.game_state.sheriff_seat || null;
+        if (nextSheriff) {
+          const reason = prevSheriff ? 'handover' : 'elected';
+          // De-duplicate sheriff badge notifications because local optimistic updates
+          // and realtime watcher can deliver the same transition twice.
+          const notifyKey = [
+            gameState.game_state.phase_version || 0,
+            prevSheriff || 0,
+            nextSheriff,
+            reason
+          ].join(':');
+          if (this.lastSheriffNotifyKey !== notifyKey) {
+            this.lastSheriffNotifyKey = notifyKey;
+            this.notifySheriffBadge(nextSheriff, reason);
+          }
         }
       }
 
@@ -314,7 +337,7 @@ module.exports = Behavior({
       const instructions = gameState.game_state.current_instruction || {};
 
       let witchKillTarget = null;
-      if (myRole === 'witch' && instructions.witch_info) {
+      if (myRole === 'witch' && !myRoleState.witch_save_used && instructions.witch_info) {
         witchKillTarget = instructions.witch_info.killTarget;
       }
 
@@ -369,7 +392,7 @@ module.exports = Behavior({
     /**
      * 计算行动信息
      */
-    calculateActionInfo(gameState, mySeat, phase, subPhase, myRole, isJudge) {
+    calculateActionInfo(gameState, mySeat, phase, subPhase, myRole, myRoleState, isJudge) {
       const actions = gameState.current_round_actions || {};
       const players = gameState.players || [];
 
@@ -380,11 +403,13 @@ module.exports = Behavior({
       
       const isWolfSide = WOLF_ROLES.includes(myRole);
       const isWitchPhase = (subPhase || '').indexOf('witch') !== -1;
+      const isWitchPlayer = myRole === 'witch';
+      const canWitchSeeNightKill = !isWitchPlayer || !isWitchPhase || !myRoleState?.witch_save_used;
       
       if (isWolfSide || isJudge || isWitchPhase) {
         // 如果是女巫，优先从 witch_info 获取击杀目标
         const inst = gameState.game_state.current_instruction;
-        if (isWitchPhase && inst?.witch_info?.killTarget) {
+        if (isWitchPhase && inst?.witch_info?.killTarget && (isJudge || canWitchSeeNightKill)) {
           const targetSeat = inst.witch_info.killTarget;
           wolfKillTarget = players.find(p => p.seat === targetSeat);
         }
@@ -408,7 +433,7 @@ module.exports = Behavior({
 
         // 计算最高票目标
         const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-        if (!wolfKillTarget && sorted.length > 0) {
+        if (!wolfKillTarget && sorted.length > 0 && (isJudge || canWitchSeeNightKill)) {
           const hasConsensus = sorted.length === 1 || sorted[0][1] > sorted[1][1];
           if (hasConsensus) {
             const topSeat = Number(sorted[0][0]);
@@ -434,6 +459,7 @@ module.exports = Behavior({
     calculateUIState(gameState, lastGameState, me, mySeat, isJudge, subPhase) {
       const myOpenid = this.data.myOpenid;
       const actions = gameState.current_round_actions || {};
+      const phase = gameState.game_state.phase;
       const rolesInGame = gameState.config?.roles || {};
       const sheriffSeat = gameState.game_state.sheriff_seat;
 
@@ -458,12 +484,24 @@ module.exports = Behavior({
 
       // 狼人共识目标
       let wolfConsensusTarget = null;
+      let isWolfConsensusReached = false;
       if (gameState.game_state.phase === 'night' && subPhase === 'werewolf_phase') {
         const votes = actions.werewolf_votes || {};
-        const counts = {};
-        Object.values(votes).forEach(v => counts[v] = (counts[v] || 0) + 1);
-        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-        if (sorted.length > 0) wolfConsensusTarget = Number(sorted[0][0]);
+        const voteValues = Object.values(votes);
+        const aliveWolves = gameState.players.filter(p => p.is_alive && WOLF_ROLES.includes(p.role));
+        const uniqueTargets = [...new Set(voteValues)];
+
+        // 共识判定：所有存活狼人都已投，且唯一目标非0
+        if (voteValues.length === aliveWolves.length && uniqueTargets.length === 1 && uniqueTargets[0] > 0) {
+          isWolfConsensusReached = true;
+          wolfConsensusTarget = Number(uniqueTargets[0]);
+        } else if (voteValues.length > 0) {
+          // 哪怕没达成共识，也计算当前最高票作为“提示”
+          const counts = {};
+          voteValues.forEach(v => counts[v] = (counts[v] || 0) + 1);
+          const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+          if (sorted.length > 0) wolfConsensusTarget = Number(sorted[0][0]);
+        }
       }
 
       // 警长候选人
@@ -473,7 +511,8 @@ module.exports = Behavior({
       const judgeSummary = isJudge ? this.buildJudgeSummary(gameState) : null;
 
       // 投票阶段标识
-      const isVotingPhase = ['voting', 'pk_voting', 'sheriff_voting', 'sheriff_pk_voting'].includes(subPhase);
+      const isVotingPhase = this.isVotingPhase(subPhase, phase);
+      const votedSeatMap = this.buildVotedSeatMap(actions, subPhase, phase, isVotingPhase);
 
       return {
         markOptions,
@@ -482,12 +521,50 @@ module.exports = Behavior({
         currentVoteResult,
         voteScrollTop,
         wolfConsensusTarget,
+        isWolfConsensusReached,
         isSheriffCandidate,
         judgeSummary,
         hasConfirmedRole,
         confirmedCount,
-        isVotingPhase
+        isVotingPhase,
+        votedSeatMap
       };
+    },
+
+    isVotingPhase(subPhase, phase) {
+      const votingSubPhases = [
+        'voting',
+        'pk_voting',
+        'sheriff_voting',
+        'sheriff_pk_voting',
+        // Compatibility aliases
+        'day_voting',
+        'day_pk',
+        'sheriff_election',
+        'sheriff_pk'
+      ];
+      if (votingSubPhases.includes(subPhase)) return true;
+      return ['day_voting', 'day_pk', 'sheriff_election', 'sheriff_pk'].includes(phase);
+    },
+
+    buildVotedSeatMap(actions, subPhase, phase, isVotingPhase) {
+      if (!isVotingPhase) return {};
+
+      const isSheriffVoting =
+        subPhase === 'sheriff_voting' ||
+        subPhase === 'sheriff_pk_voting' ||
+        phase === 'sheriff_election' ||
+        phase === 'sheriff_pk' ||
+        subPhase === 'sheriff_election' ||
+        subPhase === 'sheriff_pk';
+      const votes = isSheriffVoting ? (actions.sheriff_votes || {}) : (actions.day_votes || {});
+      const votedSeatMap = {};
+
+      Object.keys(votes).forEach((seatKey) => {
+        votedSeatMap[Number(seatKey)] = true;
+      });
+
+      return votedSeatMap;
     },
 
     /**

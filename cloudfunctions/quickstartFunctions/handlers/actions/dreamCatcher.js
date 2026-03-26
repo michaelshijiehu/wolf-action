@@ -18,6 +18,8 @@ module.exports = (ctx) => ({
         'current_round_actions.dream_catcher_acted': true
       } 
     });
+    const refreshed = await ctx.db.collection('game_rooms').doc(ctx.roomDocId).get();
+    await ctx.nextPhase(ctx.eventRoomId, refreshed.data, ctx.roomDocId);
     return { success: true };
   }
 });

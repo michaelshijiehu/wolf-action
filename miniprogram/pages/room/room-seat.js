@@ -120,12 +120,6 @@ module.exports = Behavior({
           this.showCustomModal({ title: '使用毒药', content: `确定要毒死 ${target.nickname} 吗？`, confirmColor: '#ff4d4f', success: (res) => { if (res.confirm) this.onWitchPoison(targetSeat); } });
           return;
         }
-        if (subPhase === 'sheriff_nomination' || subPhase === 'sheriff_speech') {
-          if (this.data.mySeat === targetSeat) {
-            this.onSheriffJoin();
-            return;
-          }
-        }
         if (subPhase === 'hunter_action' && myRole === 'hunter') {
           if (!target.is_alive) { wx.showToast({ title: '目标已出局', icon: 'none' }); return; }
           if (targetSeat === this.data.mySeat) { wx.showToast({ title: '不能带走自己', icon: 'none' }); return; }

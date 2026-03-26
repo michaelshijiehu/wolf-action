@@ -45,25 +45,35 @@ module.exports = Behavior({
       if (this.data.hasConfirmedRole) return;
       wx.showLoading({ title: '确认中...' });
       wx.cloud.callFunction({ name: 'quickstartFunctions', data: { type: 'roleConfirm', roomId: this.data.roomId } })
-        .then(() => { 
-          this.setData({ hasConfirmedRole: true }); 
-          // Close the card immediately after confirming with animation logic
-          if (this.data.showRoleCard) {
-            if (this.autoCloseTimer) clearTimeout(this.autoCloseTimer);
-            this.setData({ roleCardFlipped: false });
-            setTimeout(() => { this.setData({ showRoleCard: false }); }, 400);
+        .then(res => {
+          if (res.result && res.result.success) {
+            this.setData({ hasConfirmedRole: true });
+            // Close the card immediately after confirming with animation logic
+            if (this.data.showRoleCard) {
+              if (this.autoCloseTimer) clearTimeout(this.autoCloseTimer);
+              this.setData({ roleCardFlipped: false });
+              setTimeout(() => { this.setData({ showRoleCard: false }); }, 400);
+            }
+          } else {
+            wx.showToast({ title: (res.result && res.result.message) || '确认失败', icon: 'none' });
           }
         })
         .catch(e => { console.error('Role confirm failed', e); wx.showToast({ title: '确认失败', icon: 'none' }); })
         .finally(() => { wx.hideLoading(); });
     },
 
-    notifySheriffBadge(seat) {
+    notifySheriffBadge(seat, reason) {
       if (this.data.mySeat === seat) {
         wx.vibrateLong();
+        let content = '上任警长已将警徽移交给您，现在您是警长。';
+        if (reason === 'elected') {
+          content = '恭喜您当选警长！';
+        } else if (reason === 'handover') {
+          content = '上任警长已将警徽移交给您，现在您是警长。';
+        }
         wx.showModal({
           title: '获得警徽',
-          content: '上任警长已将警徽移交给您，现在您是警长。',
+          content: content,
           showCancel: false,
           confirmText: '收到'
         });
@@ -93,10 +103,14 @@ module.exports = Behavior({
           if (res.confirm) {
             wx.showLoading({ title: '解散中...' });
             wx.cloud.callFunction({ name: 'quickstartFunctions', data: { type: 'deleteRoom', roomId: this.data.roomId } })
-              .then(() => {
-                wx.removeStorageSync(`player_marks_${this.data.roomId}`);
-                wx.showToast({ title: '房间已解散', icon: 'none' });
-                setTimeout(() => { wx.reLaunch({ url: '/pages/index/index' }); }, 1500);
+              .then(res => {
+                if (res.result && res.result.success) {
+                  wx.removeStorageSync(`player_marks_${this.data.roomId}`);
+                  wx.showToast({ title: '房间已解散', icon: 'none' });
+                  setTimeout(() => { wx.reLaunch({ url: '/pages/index/index' }); }, 1500);
+                } else {
+                  wx.showToast({ title: (res.result && res.result.message) || '解散失败', icon: 'none' });
+                }
               })
               .catch(e => { console.error(e); wx.showToast({ title: '解散失败', icon: 'none' }); })
               .finally(() => { wx.hideLoading(); });

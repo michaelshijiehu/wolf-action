@@ -159,6 +159,11 @@ module.exports = (ctx) => ({
   },
 
   updateRoomSize: async (ev) => {
+    if (ctx.roomDoc._openid !== ctx.wxCtx.OPENID) return { success: false, message: '仅房主可调整人数' };
+    if (ctx.roomDoc.game_state.status !== 'waiting') return { success: false, message: '游戏进行中，无法调整人数' };
+    if (!Number.isInteger(ev.targetCount) || ev.targetCount < 6 || ev.targetCount > 18) {
+      return { success: false, message: '目标人数不合法(6-18)' };
+    }
     let p = ctx.roomDoc.players;
     if (ev.targetCount > p.length) {
       for (let i = p.length; i < ev.targetCount; i++) {
@@ -247,6 +252,7 @@ module.exports = (ctx) => ({
   },
 
   resetRoom: async () => {
+    if (ctx.roomDoc._openid !== ctx.wxCtx.OPENID) return { success: false, message: '仅房主可重置房间' };
     const resetP = ctx.roomDoc.players.map(p => p.openid ? {
       seat: p.seat,
       openid: p.openid,
@@ -328,6 +334,9 @@ module.exports = (ctx) => ({
     if (ctx.roomDoc._openid !== ctx.wxCtx.OPENID) return { success: false, message: '无权转移' };
     const targetOpenid = ev.targetOpenid;
     if (!targetOpenid) return { success: false, message: '目标玩家不存在' };
+    const inPlayers = (ctx.roomDoc.players || []).some(p => p.openid === targetOpenid);
+    const inVisitors = (ctx.roomDoc.visitors || []).some(v => v.openid === targetOpenid);
+    if (!inPlayers && !inVisitors) return { success: false, message: '目标不在房间内' };
     await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({ data: { _openid: targetOpenid, updated_at: new Date() } });
     return { success: true };
   },

@@ -54,7 +54,7 @@ const ROLE_FACTIONS = {
 };
 
 // 狼人角色列表
-const WOLF_ROLES = ['werewolf', 'wolf_king', 'wolf_beauty', 'hidden_wolf', 'gargoyle'];
+const WOLF_ROLES = ['werewolf', 'wolf_king', 'white_wolf_king', 'wolf_beauty', 'hidden_wolf', 'gargoyle', 'night_wolf'];
 
 // 神职角色列表
 const GOD_ROLES = ['seer', 'witch', 'hunter', 'idiot', 'guard', 'cupid', 'merchant', 'silencer', 'gravekeeper', 'magician', 'dream_catcher'];

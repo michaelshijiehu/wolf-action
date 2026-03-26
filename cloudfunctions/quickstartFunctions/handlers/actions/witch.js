@@ -13,17 +13,21 @@ module.exports = (ctx) => ({
       await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({
         data: { 'current_round_actions.witch_acted': true }
       });
+      const refreshed = await ctx.db.collection('game_rooms').doc(ctx.roomDocId).get();
+      await ctx.nextPhase(ctx.eventRoomId, refreshed.data, ctx.roomDocId);
       return { success: true };
     }
 
     const pIdx = ctx.roomDoc.players.findIndex(x => x.openid === ctx.wxCtx.OPENID);
     if (pIdx === -1) return { success: false, message: '您未入座' };
     const player = ctx.roomDoc.players[pIdx];
-    const up = { 'current_round_actions.witch_acted': true };
+    const up = {};
 
     if (ev.actionType === 'save') {
       if (player.role_state.witch_save_used) return { success: false, message: '解药已使用' };
+      // 当晚一旦确认用药，直接视为行动完成并进入下一阶段
       up['current_round_actions.witch_action.save'] = true;
+      up['current_round_actions.witch_acted'] = true;
       up[`players.${pIdx}.role_state.witch_save_used`] = true;
     } else if (ev.actionType === 'poison') {
       const targetSeat = Number(ev.targetSeat);
@@ -31,10 +35,15 @@ module.exports = (ctx) => ({
       if (!aliveTarget.ok) return aliveTarget.res;
       if (player.role_state.witch_poison_used) return { success: false, message: '毒药已使用' };
       up['current_round_actions.witch_action.poison_target'] = targetSeat;
+      up['current_round_actions.witch_acted'] = true;
       up[`players.${pIdx}.role_state.witch_poison_used`] = true;
+    } else {
+      return { success: false, message: '不支持的女巫操作' };
     }
 
     await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({ data: up });
+    const refreshed = await ctx.db.collection('game_rooms').doc(ctx.roomDocId).get();
+    await ctx.nextPhase(ctx.eventRoomId, refreshed.data, ctx.roomDocId);
     return { success: true };
   }
 });

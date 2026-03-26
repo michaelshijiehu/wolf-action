@@ -10,7 +10,14 @@ module.exports = (ctx) => ({
     }
 
     const exiledSeat = ctx.roomDoc.game_state.last_exiled_seat;
-    if (!exiledSeat) return { success: true, result: [] };
+    if (!exiledSeat) {
+      await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({
+        data: { 'current_round_actions.gravekeeper_acted': true }
+      });
+      const refreshedNoExile = await ctx.db.collection('game_rooms').doc(ctx.roomDocId).get();
+      await ctx.nextPhase(ctx.eventRoomId, refreshedNoExile.data, ctx.roomDocId);
+      return { success: true, result: [] };
+    }
     const p = ctx.roomDoc.players.find(pl => pl.seat === exiledSeat);
     const role = p ? p.role : 'unknown';
     const camp = (role && ctx.WOLF_ROLES.includes(role)) || p?.role_state?.is_wolf_side ? 'wolf' : 'good';
@@ -21,6 +28,8 @@ module.exports = (ctx) => ({
         'current_round_actions.gravekeeper_acted': true
       } 
     });
+    const refreshed = await ctx.db.collection('game_rooms').doc(ctx.roomDocId).get();
+    await ctx.nextPhase(ctx.eventRoomId, refreshed.data, ctx.roomDocId);
     return { success: true, result };
   }
 });

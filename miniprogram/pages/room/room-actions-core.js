@@ -9,6 +9,34 @@ module.exports = Behavior({
   },
 
   methods: {
+    applyLocalVoteEcho(voteType, targetSeat) {
+      const gameState = this.data.gameState;
+      const mySeat = this.data.mySeat;
+      if (!gameState || !mySeat) return;
+
+      const actions = gameState.current_round_actions || {};
+      const nextVoteMap = {
+        ...(actions[voteType] || {}),
+        [mySeat]: Number(targetSeat)
+      };
+      const nextGameState = {
+        ...gameState,
+        current_round_actions: {
+          ...actions,
+          [voteType]: nextVoteMap
+        }
+      };
+      const nextVotedSeatMap = {
+        ...(this.data.votedSeatMap || {}),
+        [mySeat]: true
+      };
+
+      this.setData({
+        gameState: nextGameState,
+        votedSeatMap: nextVotedSeatMap
+      });
+    },
+
     onNextPhase() {
       console.log('[DEBUG] onNextPhase called');
       if (this.data.isNextPhasing) return;
@@ -59,31 +87,25 @@ module.exports = Behavior({
       console.log(`[DEBUG] onGenericAction triggered for subPhase: ${subPhase}, phase: ${phase}`);
 
       switch (subPhase) {
-        case 'cupid_phase':
-          return this.onCupidConfirm();
+        case 'guard_phase':
         case 'magician_phase':
-          return this.onMagicianAction();
-        case 'wild_child_phase':
-          // Handled via seat tap usually, but can be here if confirmed via button
-          // Assuming selection logic exists, for now just skip if no target
-          if (this.data.wolfKillTarget) return this.onWildChildAction(this.data.wolfKillTarget.seat);
-          break;
-        case 'werewolf_phase':
-          wx.showToast({ title: '等待倒计时结束...', icon: 'none' });
-          return;
         case 'dream_catcher_phase':
         case 'wolf_beauty_phase':
         case 'gargoyle_phase':
         case 'merchant_phase':
         case 'silencer_phase':
-          return this.onNextPhase();
+        case 'wild_child_phase':
         case 'gravekeeper_phase':
-          return this.onGravekeeperAction();
-        case 'lover_phase':
+        case 'cupid_phase':
+          return this.onConfirmRoleAction();
+        case 'werewolf_phase':
+          wx.showToast({ title: '等待倒计时结束...', icon: 'none' });
+          return;
         case 'hunter_phase':
-          return this.onNextPhase();
-        case 'guard_phase':
-          return this.onGuardSkip();
+        case 'lover_phase':
+        case 'witch_phase':
+        case 'seer_phase':
+          return this.onConfirmRoleAction();
         case 'hunter_action':
           return this.onHunterSkip();
         case 'sheriff_handover':
@@ -95,7 +117,11 @@ module.exports = Behavior({
             return this.onQuitSheriff();
           }
         case 'sheriff_voting':
+        case 'sheriff_pk_voting':
           return this.onSheriffAbstain();
+        case 'voting':
+        case 'pk_voting':
+          return this.onAbstainVote();
         case 'leave_speech':
         case 'sheriff_speech':
         case 'sheriff_pk_speech':
@@ -104,9 +130,24 @@ module.exports = Behavior({
           return this.onNextPhase();
       }
 
-      if (subPhase === 'voting' || subPhase === 'pk_voting' || phase === 'day_voting') {
+      if (subPhase === 'voting' || subPhase === 'pk_voting' || phase === 'day_voting' || phase === 'pk_voting') {
         return this.onAbstainVote();
       }
+    },
+
+    onConfirmRoleAction() {
+      wx.showLoading({ title: '确认中...' });
+      wx.cloud.callFunction({
+        name: 'quickstartFunctions',
+        data: { type: 'confirmRoleAction', roomId: this.data.roomId }
+      }).then(res => {
+        if (!res.result.success) wx.showToast({ title: res.result.message, icon: 'none' });
+      }).catch(err => {
+        console.error(err);
+        wx.showToast({ title: '操作失败', icon: 'none' });
+      }).finally(() => {
+        wx.hideLoading();
+      });
     },
 
     onToggleManualMode() {
@@ -187,8 +228,9 @@ module.exports = Behavior({
     onJoinSheriff() {
       wx.showLoading({ title: '上警中...' });
       wx.cloud.callFunction({ name: 'quickstartFunctions', data: { type: 'sheriffAction', roomId: this.data.roomId, action: 'join', isJoining: true, seat: this.data.mySeat } })
-        .then(() => {
-          wx.showToast({ title: '已上警', icon: 'success' });
+        .then(res => {
+          if (res.result && res.result.success) wx.showToast({ title: '已上警', icon: 'success' });
+          else wx.showToast({ title: (res.result && res.result.message) || '上警失败', icon: 'none' });
         })
         .catch(e => { console.error(e); })
         .finally(() => { wx.hideLoading(); });
@@ -197,8 +239,9 @@ module.exports = Behavior({
     onQuitSheriff() {
       wx.showLoading({ title: '退水中...' });
       wx.cloud.callFunction({ name: 'quickstartFunctions', data: { type: 'sheriffAction', roomId: this.data.roomId, action: 'join', isJoining: false, seat: this.data.mySeat } })
-        .then(() => {
-          wx.showToast({ title: '已退水', icon: 'success' });
+        .then(res => {
+          if (res.result && res.result.success) wx.showToast({ title: '已退水', icon: 'success' });
+          else wx.showToast({ title: (res.result && res.result.message) || '退水失败', icon: 'none' });
         })
         .catch(e => { console.error(e); })
         .finally(() => { wx.hideLoading(); });
@@ -216,8 +259,13 @@ module.exports = Behavior({
           voteId: this.data.gameState.game_state.current_vote_id
         } 
       })
-        .then(() => {
-          wx.showToast({ title: '已投票', icon: 'success' });
+        .then(res => {
+          if (res.result && res.result.success) {
+            this.applyLocalVoteEcho('sheriff_votes', targetSeat);
+            wx.showToast({ title: '已投票', icon: 'success' });
+          } else {
+            wx.showToast({ title: (res.result && res.result.message) || '投票失败', icon: 'none' });
+          }
         })
         .catch(e => { console.error(e); })
         .finally(() => { wx.hideLoading(); });
@@ -235,8 +283,13 @@ module.exports = Behavior({
           voteId: this.data.gameState.game_state.current_vote_id
         } 
       })
-        .then(() => {
-          wx.showToast({ title: '已弃票', icon: 'success' });
+        .then(res => {
+          if (res.result && res.result.success) {
+            this.applyLocalVoteEcho('sheriff_votes', 0);
+            wx.showToast({ title: '已弃票', icon: 'success' });
+          } else {
+            wx.showToast({ title: (res.result && res.result.message) || '弃票失败', icon: 'none' });
+          }
         })
         .catch(e => { console.error(e); })
         .finally(() => { wx.hideLoading(); });
@@ -266,8 +319,9 @@ module.exports = Behavior({
             wx.cloud.callFunction({
               name: 'quickstartFunctions',
               data: { type: 'sheriffAction', roomId: this.data.roomId, action: 'handover', targetSeat: 0 }
-            }).then(() => {
-              wx.showToast({ title: '警徽已撕毁', icon: 'success' });
+            }).then(res => {
+              if (res.result && res.result.success) wx.showToast({ title: '警徽已撕毁', icon: 'success' });
+              else wx.showToast({ title: (res.result && res.result.message) || '操作失败', icon: 'none' });
             })
               .catch(e => { console.error(e); })
               .finally(() => { wx.hideLoading(); });
@@ -289,8 +343,12 @@ module.exports = Behavior({
           seat: this.data.mySeat,
           isJoining: isJoining
         }
-      }).then(() => {
-        wx.showToast({ title: isJoining ? '已上警' : '已退水', icon: 'success' });
+      }).then(res => {
+        if (res.result && res.result.success) {
+          wx.showToast({ title: isJoining ? '已上警' : '已退水', icon: 'success' });
+        } else {
+          wx.showToast({ title: (res.result && res.result.message) || '操作失败', icon: 'none' });
+        }
       }).catch(e => {
         console.error(e);
         wx.showToast({ title: '操作失败', icon: 'none' });
@@ -311,7 +369,10 @@ module.exports = Behavior({
         } 
       })
         .then(res => {
-          if (res.result.success) { wx.showToast({ title: '已投票', icon: 'success' }); }
+          if (res.result.success) {
+            this.applyLocalVoteEcho('day_votes', targetSeat);
+            wx.showToast({ title: '已投票', icon: 'success' });
+          }
           else { wx.showToast({ title: res.result.message, icon: 'none' }); }
         })
         .catch(e => { console.error(e); })
@@ -329,8 +390,13 @@ module.exports = Behavior({
           voteId: this.data.gameState.game_state.current_vote_id
         } 
       })
-        .then(() => {
-          wx.showToast({ title: '已弃票', icon: 'success' });
+        .then(res => {
+          if (res.result && res.result.success) {
+            this.applyLocalVoteEcho('day_votes', 0);
+            wx.showToast({ title: '已弃票', icon: 'success' });
+          } else {
+            wx.showToast({ title: (res.result && res.result.message) || '弃票失败', icon: 'none' });
+          }
         })
         .catch(e => { console.error(e); })
         .finally(() => { wx.hideLoading(); });

@@ -19,18 +19,15 @@ module.exports = Behavior({
       wx.showLoading({ title: '操作中...' });
       wx.cloud.callFunction({ name: 'quickstartFunctions', data: { type: 'witchAction', roomId: this.data.roomId, actionType: 'poison', targetSeat } })
         .then(res => {
-          if (res.result.success) { this.setData({ witchPoisonTarget: targetSeat }); wx.showToast({ title: '已使用毒药', icon: 'success' }); }
+          if (res.result.success) {
+            this.setData({ witchPoisonTarget: targetSeat });
+            wx.showToast({ title: '已使用毒药', icon: 'success' });
+          } else {
+            wx.showToast({ title: res.result.message || '操作失败', icon: 'none' });
+          }
         })
-        .catch(e => { console.error(e); })
+        .catch(e => { console.error(e); wx.showToast({ title: '调用失败', icon: 'none' }); })
         .finally(() => { wx.hideLoading(); });
-    },
-
-    onWitchSkip() {
-      wx.cloud.callFunction({ name: 'quickstartFunctions', data: { type: 'witchAction', roomId: this.data.roomId, actionType: 'skip' } })
-        .then(() => {
-          this.onNextPhase();
-        })
-        .catch(e => { console.error(e); });
     }
   }
 });

@@ -81,7 +81,21 @@ module.exports = (ctx) => ({
       if (ctx.roomDoc.current_round_actions?.silencer_silence === me.seat) return { success: false, message: '您已被禁言，无法上警' };
       let c = ctx.roomDoc.game_state.sheriff_candidate_seats || [];
       if (ev.isJoining) { if (!c.includes(me.seat)) c.push(me.seat); } else { c = c.filter(s => s !== me.seat); }
-      await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({ data: { 'game_state.sheriff_candidate_seats': c } });
+      
+      const updates = { 'game_state.sheriff_candidate_seats': c };
+      
+      // 核心逻辑：如果退水后只剩一人，直接当选 (覆盖报名、发言、投票全阶段)
+      const isElectionOngoing = ['sheriff_nomination', 'sheriff_speech', 'sheriff_voting'].includes(currentSubPhase);
+      if (!ev.isJoining && c.length === 1 && isElectionOngoing) {
+        updates['game_state.sheriff_seat'] = c[0];
+        updates['game_state.election_result'] = 'elected';
+        
+        await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({ data: updates });
+        const updatedRoom = ctx.applyUpdates(ctx.roomDoc, updates);
+        return await ctx.nextPhase(ctx.eventRoomId, updatedRoom, ctx.roomDocId);
+      }
+
+      await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({ data: updates });
     }
     else if (ev.action === 'vote') {
       // 核心拦截：出局或当晚死亡的人不能投票给别人

@@ -52,22 +52,19 @@ module.exports = Behavior({
       // Trigger actions based on phase
       if (subPhase === 'cupid_phase' && myRole === 'cupid') {
         if (this.data.cupidTargets && this.data.cupidTargets.length === 2) {
-          this.onCupidConfirm();
+          this.onConfirmRoleAction();
         } else {
-          if (this.data.cupidTargets.length !== 2) {
-            this.onGenericAction();
-          } else {
-            this.onCupidConfirm();
-          }
+          this.onGenericAction();
         }
       } else if (subPhase === 'werewolf_phase') {
         this.onWolfConfirm();
-      } else if (subPhase === 'witch_phase') {
-        this.onWitchSkip();
-      } else if (subPhase === 'guard_phase') {
-        this.onGuardSkip();
-      } else if (subPhase === 'seer_phase') {
-        this.onSeerSkip();
+      } else if ([
+        'witch_phase', 'guard_phase', 'seer_phase', 'magician_phase', 
+        'dream_catcher_phase', 'wolf_beauty_phase', 'gargoyle_phase', 
+        'merchant_phase', 'silencer_phase', 'wild_child_phase', 
+        'gravekeeper_phase', 'hunter_phase', 'lover_phase'
+      ].includes(subPhase)) {
+        this.onConfirmRoleAction();
       } else {
         this.onGenericAction();
       }

@@ -32,7 +32,9 @@ module.exports = (ctx) => ({
     }
 
     // 检查是否有刀人目标（全员达成共识）
-    const aliveWolves = ctx.roomDoc.players.filter(p => p.is_alive && ctx.WOLF_ROLES.includes(p.role));
+    const aliveWolves = ctx.roomDoc.players.filter(
+      p => p.is_alive && (ctx.WOLF_ROLES.includes(p.role) || p.role_state?.is_wolf_side)
+    );
     const actions = ctx.roomDoc.current_round_actions || {};
     const votes = actions.werewolf_votes || {};
     const targetSeats = Object.values(votes);

@@ -64,10 +64,9 @@ exports.main = async (event) => {
       return await acts[type](event);
     } catch (err) {
       console.error(`[FATAL ERROR] Action ${type} failed:`, err);
-      return { 
-        success: false, 
-        message: `服务器内部错误: ${err.message || '未知错误'}`,
-        error: err.stack
+      return {
+        success: false,
+        message: `服务器内部错误: ${err.message || '未知错误'}`
       };
     }
   }

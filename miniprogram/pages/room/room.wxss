@@ -458,10 +458,21 @@
   /* 稍微放大 */
 }
 
+.avatar-box.me.is-voted {
+  border-color: #52c41a;
+  box-shadow: 0 0 25rpx #52c41a, 0 6rpx 10rpx rgba(0, 0, 0, 0.5);
+}
+
 .avatar-box.is-voter {
   box-shadow: 0 0 15rpx #ffd700;
   border-color: #ffd700;
   animation: voter-glow 2s infinite;
+}
+
+.avatar-box.is-voted {
+  box-shadow: 0 0 15rpx #52c41a;
+  border-color: #52c41a;
+  animation: voted-glow 2s infinite;
 }
 
 .avatar-box.wolf-halo {
@@ -480,6 +491,12 @@
   0% { box-shadow: 0 0 5rpx #ffd700; }
   50% { box-shadow: 0 0 25rpx #ffd700; }
   100% { box-shadow: 0 0 5rpx #ffd700; }
+}
+
+@keyframes voted-glow {
+  0% { box-shadow: 0 0 5rpx #52c41a; }
+  50% { box-shadow: 0 0 25rpx #52c41a; }
+  100% { box-shadow: 0 0 5rpx #52c41a; }
 }
 
 .status-dot {

@@ -332,7 +332,7 @@ function validatePlayerAction(action, roomDoc, openid) {
 
   // 检查是否是该玩家的回合
   if (instruction?.roleRequired) {
-    const WOLF_ROLES = ['werewolf', 'wolf_king', 'wolf_beauty', 'hidden_wolf', 'gargoyle'];
+    const WOLF_ROLES = ['werewolf', 'wolf_king', 'white_wolf_king', 'wolf_beauty', 'hidden_wolf', 'gargoyle', 'night_wolf'];
     
     if (instruction.roleRequired === 'werewolf') {
       if (!WOLF_ROLES.includes(player.role)) {

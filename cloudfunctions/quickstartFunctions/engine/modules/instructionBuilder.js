@@ -5,7 +5,7 @@
 
 const { flowConfig } = require('../../constants');
 
-const WOLF_ROLES = ['werewolf', 'wolf_king', 'wolf_beauty', 'hidden_wolf', 'gargoyle'];
+const WOLF_ROLES = ['werewolf', 'wolf_king', 'white_wolf_king', 'wolf_beauty', 'hidden_wolf', 'gargoyle', 'night_wolf'];
 
 /**
  * 创建阶段指令
@@ -49,8 +49,31 @@ function createInstruction(key, { forcedDuration, gameState, updates = {}, curre
     }
   });
 
-  // 生成音频
-  const audio = cfg.getAudio ? cfg.getAudio(tempGs) : [];
+  // 生成音频：先播上一阶段退出语音（如“请闭眼”），再播当前阶段进入语音
+  const audio = [];
+  const prevSubPhase = gameState?.sub_phase;
+  if (prevSubPhase && prevSubPhase !== key) {
+    const prevCfg = flowConfig[prevSubPhase];
+    const prevRoleReq = prevCfg?.roleRequired;
+    let shouldPlayExit = false;
+    if (prevCfg?.getExitAudio && prevRoleReq) {
+      if (prevRoleReq === 'werewolf') {
+        shouldPlayExit = !!currentRoundActions.werewolf_acted;
+      } else {
+        shouldPlayExit = !!currentRoundActions[`${prevRoleReq}_acted`];
+      }
+    }
+    if (shouldPlayExit) {
+      const exitAudio = prevCfg.getExitAudio(tempGs) || [];
+      if (Array.isArray(exitAudio)) audio.push(...exitAudio);
+      else audio.push(exitAudio);
+    }
+  }
+  if (cfg.getAudio) {
+    const phaseAudio = cfg.getAudio(tempGs) || [];
+    if (Array.isArray(phaseAudio)) audio.push(...phaseAudio);
+    else audio.push(phaseAudio);
+  }
 
   // 构建指令对象
   const instruction = {

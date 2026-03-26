@@ -13,8 +13,6 @@ module.exports = Behavior({
         })
         .catch(e => { console.error(e); })
         .finally(() => { wx.hideLoading(); });
-    },
-
-    onGuardSkip() { this.onNextPhase(); }
+    }
   }
 });

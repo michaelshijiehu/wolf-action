@@ -105,7 +105,7 @@ const flowConfig = {
     ui: { title: '🎉 欢迎参与', tips: '游戏即将开始', actionBtn: '准备好了', color: '#ffec3d', actionPanel: 'none', brightness: 0.7 }
   },
   [GAME_PHASES.DEAL_CARDS]: {
-    next: GAME_PHASES.NIGHT_START, env: 'day', duration: 120, auto_proceed: true,
+    next: GAME_PHASES.NIGHT_START, env: 'day', duration: 20, auto_proceed: true,
     getAudio: () => ['DEAL_CARDS'],
     ui: { title: '🎴 发放身份', tips: '请确认您的身份牌(全员确认后自动入夜)', actionBtn: '确认身份', color: '#ffa940', actionPanel: 'none', brightness: 0.7 }
   },
@@ -128,10 +128,10 @@ const flowConfig = {
     ui: { title: '丘比特行动', tips: '请连接情侣', color: '#ff85c0', actionPanel: 'cupid', brightness: 0.6 }
   },
   [GAME_PHASES.LOVER_PHASE]: {
-    next: GAME_PHASES.GUARD_PHASE, env: 'night', roleRequired: 'cupid', firstNightOnly: true, duration: 10, auto_proceed: true,
+    next: GAME_PHASES.GUARD_PHASE, env: 'night', roleRequired: 'cupid', firstNightOnly: true, duration: 10, auto_proceed: false,
     getAudio: () => ['LOVER_WAKE'],
     getExitAudio: () => ['LOVER_END'],
-    ui: { title: '情侣确认', tips: '确认你的另一半', color: '#ff4d4f', actionPanel: 'lover_confirm', brightness: 0.6 }
+    ui: { title: '情侣确认', tips: '确认你的另一半', actionBtn: '我知道了', color: '#ff4d4f', actionPanel: 'lover_confirm', brightness: 0.6 }
   },
   [GAME_PHASES.GUARD_PHASE]: {
     next: GAME_PHASES.MAGICIAN_PHASE, env: 'night', roleRequired: 'guard', duration: 15, allowAction: ['guard'], auto_proceed: true,
@@ -152,7 +152,7 @@ const flowConfig = {
     ui: { title: '摄梦人行动', tips: '请选择', color: '#eb2f96', actionPanel: 'dream_catcher', brightness: 0.6 }
   },
   [GAME_PHASES.WEREWOLF_PHASE]: {
-    next: GAME_PHASES.WOLF_BEAUTY_PHASE, env: 'night', roleRequired: 'werewolf', duration: 50, allowAction: ['werewolf'], auto_proceed: true,
+    next: GAME_PHASES.WOLF_BEAUTY_PHASE, env: 'night', roleRequired: 'werewolf', duration: 50, allowAction: ['werewolf'], auto_proceed: false,
     getAudio: () => ['WEREWOLF_WAKE', 'WEREWOLF_OPERATE'],
     getExitAudio: () => ['WEREWOLF_SLEEP'],
     ui: { title: '狼人行动', tips: '请选择目标并点击确定', color: '#ff4d4f', actionPanel: 'werewolf', brightness: 0.6 }
@@ -200,10 +200,10 @@ const flowConfig = {
     ui: { title: '守墓人行动', tips: '请确认', color: '#5b8c00', actionPanel: 'gravekeeper', brightness: 0.6 }
   },
   [GAME_PHASES.HUNTER_PHASE]: {
-    next: GAME_PHASES.DAY_ANNOUNCE, env: 'night', roleRequired: 'hunter', duration: 15, allowAction: ['hunter'], auto_proceed: true,
+    next: GAME_PHASES.DAY_ANNOUNCE, env: 'night', roleRequired: 'hunter', duration: 15, allowAction: ['hunter'], auto_proceed: false,
     getAudio: () => ['HUNTER_WAKE', 'HUNTER_OPERATE'],
     getExitAudio: () => ['HUNTER_SLEEP'],
-    ui: { title: '猎人确认', tips: '请确认状态', color: '#fa8c16', actionPanel: 'hunter_confirm', brightness: 0.6 }
+    ui: { title: '猎人确认', tips: '请确认状态', actionBtn: '确定', color: '#fa8c16', actionPanel: 'hunter_confirm', brightness: 0.6 }
   },
   [GAME_PHASES.DAY_ANNOUNCE]: {
     next: null, env: 'day', duration: 3, auto_proceed: true,
@@ -211,7 +211,7 @@ const flowConfig = {
     ui: { title: '天亮了', tips: '等待结算...', color: '#ffd700', actionPanel: 'none' }
   },
   [GAME_PHASES.DAY_DAWN]: {
-    next: GAME_PHASES.DISCUSSION, env: 'day', duration: 5, auto_proceed: true,
+    next: GAME_PHASES.DISCUSSION, env: 'day', duration: 12, auto_proceed: true,
     getAudio: (gs) => AUDIO_KEYS.ANNOUNCE_DEATH((gs.last_night_deaths || []).map(d => d.seat)),
     ui: { title: '揭晓死讯', tips: '正在结算...', color: '#ffd700', actionPanel: 'none' }
   },
@@ -221,7 +221,7 @@ const flowConfig = {
     ui: { title: '自由讨论', tips: '请按顺序发言', actionBtn: '结束发言', color: '#52c41a', actionPanel: 'none' }
   },
   [GAME_PHASES.VOTING]: {
-    next: GAME_PHASES.EXILE_ANNOUNCE, env: 'day', duration: 20, allowAction: ['all'], auto_proceed: true,
+    next: GAME_PHASES.EXILE_ANNOUNCE, env: 'day', duration: 20, allowAction: ['all'], auto_proceed: false,
     getAudio: () => ['VOTE_START_EXILE'],
     ui: { title: '放逐投票', tips: '请点击头像投票', actionBtn: '弃票', color: '#ff4d4f', actionPanel: 'vote_exile' }
   },
@@ -240,23 +240,18 @@ const flowConfig = {
     getAudio: () => ['SPEECH_START'],
     ui: { title: '竞选发言', tips: '竞选人发言中（点击头像可退水）', actionBtn: '进入投票', color: '#ffd700', actionPanel: 'sheriff_election' }
   },
-  [GAME_PHASES.SHERIFF_VOTING]: {
-    next: GAME_PHASES.ELECTION_ANNOUNCE, env: 'day', duration: 20, allowAction: ['all'], auto_proceed: true,
+  [GAME_PHASES.SHERIFF_PK_VOTING]: {
+    next: GAME_PHASES.ELECTION_ANNOUNCE, env: 'day', duration: 15, allowAction: ['all'], auto_proceed: false,
     getAudio: () => ['VOTE_START_SHERIFF'],
-    ui: { title: '警长投票', tips: '请投给候选人', actionBtn: '弃票', color: '#ffd700', actionPanel: 'vote_sheriff' }
+    ui: { title: 'PK投票', tips: '请对PK玩家投票', actionBtn: '弃票', color: '#ffd700', actionPanel: 'vote_sheriff' }
   },
   [GAME_PHASES.SHERIFF_PK_SPEECH]: {
     next: GAME_PHASES.SHERIFF_PK_VOTING, env: 'day', duration: 120, auto_proceed: true,
     getAudio: () => ['PK_START'],
     ui: { title: 'PK发言', tips: '平票玩家请轮流发言', actionBtn: '结束发言', color: '#fa541c', actionPanel: 'none' }
   },
-  [GAME_PHASES.SHERIFF_PK_VOTING]: {
-    next: GAME_PHASES.ELECTION_ANNOUNCE, env: 'day', duration: 20, allowAction: ['all'], auto_proceed: true,
-    getAudio: () => ['VOTE_START_SHERIFF'],
-    ui: { title: 'PK投票', tips: '请对PK玩家投票', actionBtn: '弃票', color: '#ffd700', actionPanel: 'vote_sheriff' }
-  },
   [GAME_PHASES.ELECTION_ANNOUNCE]: {
-    next: GAME_PHASES.DAY_DAWN, env: 'day', duration: 8, auto_proceed: true,
+    next: GAME_PHASES.DAY_DAWN, env: 'day', duration: 10, auto_proceed: true,
     getAudio: (gs) => {
       if (gs.election_result === 'tie_pk') return ['TIE_PK'];
       if (gs.election_result === 'tie') return ['TIE_RE_VOTE'];
@@ -281,12 +276,12 @@ const flowConfig = {
     ui: { title: 'PK发言', tips: '平票玩家请轮流发言', actionBtn: '结束发言', color: '#fa541c', actionPanel: 'none' }
   },
   [GAME_PHASES.PK_VOTING]: {
-    next: GAME_PHASES.EXILE_ANNOUNCE, env: 'day', duration: 20, allowAction: ['all'], auto_proceed: true,
+    next: GAME_PHASES.EXILE_ANNOUNCE, env: 'day', duration: 20, allowAction: ['all'], auto_proceed: false,
     getAudio: () => ['VOTE_START_EXILE'],
     ui: { title: 'PK投票', tips: '请在PK位中选择', actionBtn: '弃票', color: '#ff4d4f', actionPanel: 'pk_voting' }
   },
   [GAME_PHASES.EXILE_ANNOUNCE]: {
-    next: GAME_PHASES.LEAVE_SPEECH, env: 'day', duration: 5, auto_proceed: true,
+    next: GAME_PHASES.LEAVE_SPEECH, env: 'day', duration: 8, auto_proceed: true,
     getAudio: (gs) => {
       if (gs.exile_result === 'tie') return ['TIE_PK'];
       if (gs.exile_result === 'out' && gs.exile_seat) { return [`PLAYER_${gs.exile_seat}`, 'BE_EXILED']; }

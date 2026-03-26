@@ -14,7 +14,11 @@ module.exports = Behavior({
               title: '查验结果',
               content: `${targetSeat}号玩家的身份是：\n${isBad ? '🌑 狼人阵营' : '🌕 好人身份'}`,
               showCancel: false,
-              confirmText: '我知道了'
+              confirmText: '我知道了',
+              success: () => {
+                // 点击“我知道了”后，调用通用确认方法
+                this.onConfirmRoleAction();
+              }
             });
           } else {
             wx.showToast({ title: res.result.message || '查验失败', icon: 'none' });
@@ -22,8 +26,6 @@ module.exports = Behavior({
         })
         .catch(e => { console.error(e); })
         .finally(() => { wx.hideLoading(); });
-    },
-
-    onSeerSkip() { this.onNextPhase(); }
+    }
   }
 });

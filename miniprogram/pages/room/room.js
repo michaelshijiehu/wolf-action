@@ -65,6 +65,7 @@ Page({
     isTheaterMode: false, // 全屏大圆桌模式
     watchRetryCount: 0,
     voteScrollTop: 0,
-    uiTheme: 'theme-original'
+    uiTheme: 'theme-original',
+    votedSeatMap: {}
   }
 });

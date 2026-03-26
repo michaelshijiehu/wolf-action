@@ -36,6 +36,8 @@ module.exports = (ctx) => ({
         [`players.${seerIdx}.role_state.check_history`]: history
       }
     });
+    const refreshed = await ctx.db.collection('game_rooms').doc(ctx.roomDocId).get();
+    await ctx.nextPhase(ctx.eventRoomId, refreshed.data, ctx.roomDocId);
     return { success: true, isBad };
   }
 });

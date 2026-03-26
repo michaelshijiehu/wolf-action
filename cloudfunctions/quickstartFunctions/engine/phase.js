@@ -260,6 +260,7 @@ const nextPhase = async (db, roomId, roomDoc, roomDocId) => {
         updates['game_state.sheriff_candidate_seats'] = [];
         setInst('day_dawn');
       } else if (cands.length === 1) {
+        log(`仅有 ${cands[0]}号 竞选，自动当选警长`);
         updates['game_state.sheriff_seat'] = cands[0];
         updates['game_state.election_result'] = 'elected';
         setInst('election_announce');
@@ -270,7 +271,17 @@ const nextPhase = async (db, roomId, roomDoc, roomDocId) => {
       }
     },
 
-    sheriff_speech: () => setInst('sheriff_voting'),
+    sheriff_speech: () => {
+      const cands = gs.sheriff_candidate_seats || [];
+      if (cands.length === 1) {
+        log(`仅有 ${cands[0]}号 在警上，自动当选`);
+        updates['game_state.sheriff_seat'] = cands[0];
+        updates['game_state.election_result'] = 'elected';
+        setInst('election_announce');
+      } else {
+        setInst('sheriff_voting');
+      }
+    },
 
     sheriff_voting: () => {
       handleSheriffVoteCalculation({ log });
@@ -644,13 +655,13 @@ const checkAutoProceedInternal = async (db, roomId, roomDoc, roomDocId) => {
   const votingPhases = ['voting', 'pk_voting', 'sheriff_voting', 'sheriff_pk_voting'];
   if (votingPhases.includes(subPhase)) {
     const alivePlayers = roomDoc.players.filter(p => p.is_alive && p.openid);
-    let eligibleCount = alivePlayers.length;
+    const silencedSeat = roomDoc.current_round_actions?.silencer_silence;
+    let eligibleCount = 0;
     let currentVotes = {};
 
-    if (subPhase === 'sheriff_voting' || subPhase === 'sheriff_pk_voting') {
+    if (subPhase.startsWith('sheriff')) {
       const candidates = gs.sheriff_candidate_seats || [];
       const deadTonight = new Set((gs.last_night_deaths || []).map(d => d.seat));
-      const silencedSeat = roomDoc.current_round_actions?.silencer_silence;
       eligibleCount = alivePlayers.filter(p => {
         if (candidates.includes(p.seat)) return false;
         if (deadTonight.has(p.seat)) return false;
@@ -660,7 +671,6 @@ const checkAutoProceedInternal = async (db, roomId, roomDoc, roomDocId) => {
       }).length;
       currentVotes = actions.sheriff_votes || {};
     } else {
-      const silencedSeat = roomDoc.current_round_actions?.silencer_silence;
       eligibleCount = alivePlayers.filter(p => {
         if (silencedSeat === p.seat) return false;
         if (p.role === 'idiot' && p.role_state?.idiot_revealed) return false;
@@ -671,37 +681,30 @@ const checkAutoProceedInternal = async (db, roomId, roomDoc, roomDocId) => {
     }
 
     const actedCount = Object.keys(currentVotes).length;
-    // 如果全员已操作，且至少有人投票（或显式点击弃票），则立即流转
-    if (actedCount >= eligibleCount && actedCount > 0) {
-      console.log(`[Phase] All ${eligibleCount} voters acted, auto-proceeding`);
+    console.log(`[PhaseCheck] Voting: ${subPhase}, Acted: ${actedCount}, Eligible: ${eligibleCount}`);
+
+    // 核心强制：只有全员已表态且至少有1人操作，才流转
+    if (actedCount >= eligibleCount && eligibleCount > 0) {
+      console.log(`[Phase] Voting complete (${actedCount}/${eligibleCount}), proceeding.`);
       return await nextPhase(db, roomId, roomDoc, roomDocId);
     }
+    // 即使时间到了，因为 auto_proceed 为 false，所以这里如果不 return nextPhase，系统就会一直挂起，符合要求。
   }
 
-  if (roleReq && inst.auto_proceed) {
+  if (roleReq) {
     let isAllActed = false;
 
     if (roleReq === 'werewolf') {
-      const aliveWolves = roomDoc.players.filter(p => p.is_alive && WOLF_ROLES.includes(p.role));
-      const votes = actions.werewolf_votes || {};
-      const targetSeats = Object.values(votes);
-      const uniqueTargets = [...new Set(targetSeats)];
-      
-      // 必须满足三个条件：
-      // 1. 投票人数等于存活狼人数
-      // 2. 目标完全唯一 (uniqueTargets.length === 1)
-      // 3. 目标必须是具体的座位 (target > 0)
-      if (targetSeats.length === aliveWolves.length && uniqueTargets.length === 1 && uniqueTargets[0] > 0) {
-        isAllActed = true;
-      } else {
-        isAllActed = false;
-      }
+      // 核心防御：狼人阶段绝对禁止“自动探测流转”，必须等待 confirmWerewolfAction 设置 werewolf_acted
+      if (actions.werewolf_acted) isAllActed = true;
+      else isAllActed = false;
     } else if (['seer', 'witch', 'guard', 'cupid', 'magician', 'dream_catcher', 'wolf_beauty', 'gargoyle', 'merchant', 'silencer', 'wild_child', 'gravekeeper', 'hunter'].includes(roleReq)) {
-      if (actions[`${roleReq}_acted`]) isAllActed = true;
+      // 其他职能角色如果配置了 auto_proceed，可以检测动作完成即流转
+      if (inst.auto_proceed && actions[`${roleReq}_acted`]) isAllActed = true;
     }
 
     if (isAllActed) {
-      console.log(`[Phase] Role ${roleReq} completed, auto-proceeding`);
+      console.log(`[Phase] Role ${roleReq} completed, proceeding`);
       return await nextPhase(db, roomId, roomDoc, roomDocId);
     }
   }
@@ -749,20 +752,10 @@ const checkAutoProceedInternal = async (db, roomId, roomDoc, roomDocId) => {
         }
       }
 
-      // 特殊逻辑：狼人阶段不达成共识不推进
+      // 特殊逻辑：狼人阶段不再支持倒计时结束自动推进，必须手动确认
       if (gs.sub_phase === 'werewolf_phase') {
-        const aliveWolves = roomDoc.players.filter(p => p.is_alive && WOLF_ROLES.includes(p.role));
-        const votes = roomDoc.current_round_actions?.werewolf_votes || {};
-        const targetSeats = Object.values(votes);
-        const uniqueTargets = [...new Set(targetSeats)];
-        
-        // 只有当所有人投了且目标唯一且不是弃票(0)时，才允许自动流转
-        const hasConsensus = targetSeats.length === aliveWolves.length && uniqueTargets.length === 1 && uniqueTargets[0] > 0;
-        
-        if (!hasConsensus) {
-          console.log('[Phase] Werewolf consensus not reached, holding phase');
-          return roomDoc; 
-        }
+        console.log('[Phase] Werewolf phase requires manual confirmation, holding phase');
+        return roomDoc; 
       }
       return await nextPhase(db, roomId, roomDoc, roomDocId);
     }

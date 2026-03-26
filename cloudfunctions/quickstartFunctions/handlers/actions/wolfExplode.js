@@ -4,8 +4,11 @@ const { createInstruction } = require('../../engine/modules/instructionBuilder')
 module.exports = (ctx) => ({
   wolfExplode: async () => {
     const me = getMe(ctx);
-    if (!me || me.role !== 'werewolf' || !me.is_alive) return { success: false, message: '无法自爆' };
-    if (ctx.roomDoc.game_state.phase !== 'day') {
+    const isWolfSide = !!me && (ctx.WOLF_ROLES.includes(me.role) || !!me.role_state?.is_wolf_side);
+    if (!me || !isWolfSide || !me.is_alive) return { success: false, message: '无法自爆' };
+
+    const dayLikePhases = ['day', 'day_voting', 'day_pk', 'sheriff_election', 'sheriff_pk'];
+    if (!dayLikePhases.includes(ctx.roomDoc.game_state.phase)) {
       return { success: false, message: '只能在白天自爆' };
     }
     const forbiddenSubPhases = ['day_dawn', 'leave_speech', 'sheriff_handover'];
@@ -14,6 +17,7 @@ module.exports = (ctx) => ({
     }
     const players = [...ctx.roomDoc.players];
       const pIdx = players.findIndex(p => p.seat === me.seat);
+      if (pIdx === -1) return { success: false, message: '玩家状态异常，无法自爆' };
       players[pIdx].is_alive = false;
       players[pIdx].death_reason = 'explode';
       const timeline = [...(ctx.roomDoc.timeline || []), { day: ctx.roomDoc.game_state.day_count, phase: ctx.roomDoc.game_state.phase, text: `${me.seat}号 狼人自爆`, timestamp: new Date() }];

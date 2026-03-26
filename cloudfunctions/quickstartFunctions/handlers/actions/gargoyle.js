@@ -23,6 +23,8 @@ module.exports = (ctx) => ({
         [`players.${ctx.roomDoc.players.findIndex(p => p.openid === ctx.wxCtx.OPENID)}.role_state.gargoyle_check_history`]: history
       }
     });
+    const refreshed = await ctx.db.collection('game_rooms').doc(ctx.roomDocId).get();
+    await ctx.nextPhase(ctx.eventRoomId, refreshed.data, ctx.roomDocId);
     return { success: true, role };
   }
 });

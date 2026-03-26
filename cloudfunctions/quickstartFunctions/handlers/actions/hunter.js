@@ -5,17 +5,18 @@ module.exports = (ctx) => ({
     const me = getMe(ctx);
     const guard = requireRole(me, 'hunter', '您不是猎人');
     if (!guard.ok) return guard.res;
-    const pIdx = ctx.roomDoc.players.findIndex(x => x.role === 'hunter');
-    if (pIdx === -1) return { success: false };
+    const pIdx = ctx.roomDoc.players.findIndex(x => x.openid === ctx.wxCtx.OPENID);
+    if (pIdx === -1) return { success: false, message: '您未入座' };
     const hunter = ctx.roomDoc.players[pIdx];
+    const roleState = hunter.role_state || {};
     // Basic check: is hunter allowed to shoot? (e.g. not poisoned)
-    if (hunter.role_state.is_poisoned || hunter.role_state.hunter_status !== 'can_shoot') {
+    if (roleState.is_poisoned || roleState.hunter_status !== 'can_shoot') {
       return { success: false, message: '当前状态无法开枪' };
     }
     if (ctx.roomDoc.game_state.sub_phase !== 'hunter_action') {
       return { success: false, message: '当前不是猎人开枪阶段' };
     }
-    if (hunter.role_state.hunter_shoot_used) {
+    if (roleState.hunter_shoot_used) {
       return { success: false, message: '您已经开过枪了' };
     }
 
@@ -38,11 +39,24 @@ module.exports = (ctx) => ({
       // Opted not to shoot
       await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({
         data: {
-          'current_round_actions.hunter_acted': true,
-          [`players.${pIdx}.role_state.hunter_shoot_used`]: true
+          'current_round_actions.hunter_acted': true
         }
       });
     }
+    return await ctx.nextPhase(ctx.eventRoomId, ctx.roomDoc, ctx.roomDocId);
+  },
+
+  confirmHunterAction: async () => {
+    const me = getMe(ctx);
+    const guard = requireRole(me, 'hunter', '您不是猎人');
+    if (!guard.ok) return guard.res;
+    if (ctx.roomDoc.game_state.sub_phase !== 'hunter_phase' && ctx.roomDoc.game_state.sub_phase !== 'hunter_action') {
+      return { success: false, message: '当前不是猎人确认阶段' };
+    }
+
+    await ctx.db.collection('game_rooms').doc(ctx.roomDocId).update({
+      data: { 'current_round_actions.hunter_acted': true }
+    });
     return await ctx.nextPhase(ctx.eventRoomId, ctx.roomDoc, ctx.roomDocId);
   }
 });
