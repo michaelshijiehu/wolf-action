@@ -1,0 +1,76 @@
+<!-- pages/setup/setup.wxml -->
+<view class="container">
+  <view class="section">
+    <view class="section-title">快速模板</view>
+    <view class="template-grid">
+      <block wx:for="{{templates}}" wx:key="label">
+        <view class="template-card" bindtap="applyTemplate" data-index="{{index}}">
+          <view class="tpl-label">{{item.label}}</view>
+          <view class="tpl-desc">{{item.desc}}</view>
+        </view>
+      </block>
+    </view>
+  </view>
+  <view class="section">
+    <view class="section-title">基础角色</view>
+    <view class="role-item">
+      <view class="role-name">🐺 狼人</view>
+      <view class="counter">
+        <view class="btn-op {{config.werewolf <= 0 ? 'disabled' : ''}}" bindtap="updateRole" data-role="werewolf" data-op="-1">
+          -
+        </view>
+        <view class="count-val">{{config.werewolf}}</view>
+        <view class="btn-op" bindtap="updateRole" data-role="werewolf" data-op="1">+</view>
+      </view>
+    </view>
+    <view class="role-item">
+      <view class="role-name">🧑‍🌾 村民</view>
+      <view class="counter">
+        <view class="btn-op {{config.villager <= 0 ? 'disabled' : ''}}" bindtap="updateRole" data-role="villager" data-op="-1">
+          -
+        </view>
+        <view class="count-val">{{config.villager}}</view>
+        <view class="btn-op" bindtap="updateRole" data-role="villager" data-op="1">+</view>
+      </view>
+    </view>
+  </view>
+  <view class="section">
+    <view class="section-title">神职角色 (点击开启)</view>
+    <view class="god-tags">
+      <view class="god-tag {{config.seer ? 'active' : ''}}" bindtap="toggleGod" data-role="seer">
+        🔮 预言家
+      </view>
+      <view class="god-tag {{config.witch ? 'active' : ''}}" bindtap="toggleGod" data-role="witch">
+        🧪 女巫
+      </view>
+      <view class="god-tag {{config.hunter ? 'active' : ''}}" bindtap="toggleGod" data-role="hunter">
+        🔫 猎人
+      </view>
+      <view class="god-tag {{config.idiot ? 'active' : ''}}" bindtap="toggleGod" data-role="idiot">
+        🤤 白痴
+      </view>
+      <view class="god-tag {{config.guard ? 'active' : ''}}" bindtap="toggleGod" data-role="guard">
+        🛡️ 守卫
+      </view>
+      <view class="god-tag {{config.cupid ? 'active' : ''}}" bindtap="toggleGod" data-role="cupid">
+        💘 丘比特
+      </view>
+    </view>
+  </view>
+  <view class="section">
+    <view class="section-title">胜负判定模式</view>
+    <view class="mode-selection">
+      <view class="mode-card {{config.win_mode === 'kill_side' || !config.win_mode ? 'active' : ''}}" bindtap="updateWinMode" data-mode="kill_side">
+        <view class="mode-title">屠边</view>
+        <view class="mode-desc">神职或村民中有一方全灭，狼人即获胜</view>
+      </view>
+      <view class="mode-card {{config.win_mode === 'kill_all' ? 'active' : ''}}" bindtap="updateWinMode" data-mode="kill_all">
+        <view class="mode-title">屠城 (杀全家)</view>
+        <view class="mode-desc">所有好人（神职+村民）全部被杀，狼人方获胜</view>
+      </view>
+    </view>
+  </view>
+</view>
+<view class="footer">
+  <button class="btn-confirm" bindtap="onConfirm">确认配置 ({{currentCount}}人局)</button>
+</view>

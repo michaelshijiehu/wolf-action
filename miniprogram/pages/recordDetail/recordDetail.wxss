@@ -1,0 +1,321 @@
+/* miniprogram/pages/recordDetail/recordDetail.wxss */
+.container {
+  padding: 20rpx;
+  background-color: #0a0a0c;
+  min-height: 100vh;
+  color: #fff;
+}
+
+.detail-card {
+  background-color: #1a1a20;
+  border-radius: 15rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.3);
+  border: 1rpx solid #333;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx dashed #333;
+}
+
+.record-date {
+  font-size: 32rpx;
+  color: #bbb;
+}
+
+.record-winner {
+  font-size: 36rpx;
+  font-weight: bold;
+}
+
+.winner-good {
+  color: #52c41a;
+  /* Green */
+}
+
+.winner-werewolf {
+  color: #ff4d4f;
+  /* Red */
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #ffd700;
+  margin-top: 40rpx;
+  margin-bottom: 20rpx;
+  border-left: 8rpx solid #ffd700;
+  padding-left: 15rpx;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15rpx;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 20rpx;
+  border-radius: 10rpx;
+}
+
+.config-item {
+  font-size: 28rpx;
+  color: #ccc;
+}
+
+.player-list-detail {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  gap: 20rpx;
+  margin-top: 20rpx;
+}
+
+.player-item-detail {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.05); /* 更通透的背景 */
+  border-radius: 16rpx;
+  padding: 20rpx;
+  width: calc(50% - 10rpx);
+  box-sizing: border-box;
+}
+
+/* 仅头像变灰暗，不影响文字 */
+.player-item-detail.dead .player-avatar-detail {
+  filter: grayscale(100%);
+  opacity: 0.4;
+}
+
+.player-avatar-detail {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  margin-right: 20rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.player-info-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.player-name-detail {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #ffffff; /* 纯白文字 */
+  margin-bottom: 4rpx;
+}
+
+.player-role-detail {
+  font-size: 24rpx;
+  color: #ffd700; /* 金色身份，提高对比度 */
+  opacity: 0.9;
+}
+
+.player-status-dead {
+  font-size: 22rpx;
+  color: #ff4d4f; /* 亮红色，不再变灰 */
+  font-weight: bold;
+  margin-top: 6rpx;
+}
+
+.timeline-content {
+  /* Removed max-height: 600rpx; */
+  margin-top: 20rpx;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 20rpx;
+  border-radius: 10rpx;
+}
+
+.timeline-item {
+  display: flex;
+  flex-direction: column;
+  padding: 15rpx 0;
+  border-bottom: 1rpx dashed #333;
+}
+
+.timeline-item:last-child {
+  border-bottom: none;
+}
+
+.timeline-time {
+  font-size: 24rpx;
+  color: #bbb;
+  margin-bottom: 5rpx;
+}
+
+.timeline-text {
+  font-size: 28rpx;
+  color: #eee;
+  line-height: 1.5;
+}
+
+.empty-timeline {
+  text-align: center;
+  color: #666;
+  padding: 50rpx 0;
+  font-size: 28rpx;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 100rpx 0;
+  color: #bbb;
+  font-size: 32rpx;
+}
+
+/* 投票记录样式 - Avatar Version */
+.voting-history-content {
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 20rpx;
+  border-radius: 10rpx;
+}
+
+.voting-round {
+  margin-bottom: 30rpx;
+  border-bottom: 1rpx solid #333;
+  padding-bottom: 20rpx;
+}
+
+.voting-round:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.voting-round-title {
+  font-size: 26rpx;
+  color: #aaa;
+  margin-bottom: 20rpx;
+  background: rgba(255, 215, 0, 0.1);
+  padding: 5rpx 15rpx;
+  border-radius: 20rpx;
+  display: inline-block;
+}
+
+.voting-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+.vote-row {
+  display: flex;
+  align-items: center;
+  background-color: #2a2a35;
+  padding: 10rpx 20rpx;
+  border-radius: 12rpx;
+  justify-content: space-between;
+}
+
+.player-mini {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  width: 150rpx;
+  /* Fixed width for alignment */
+}
+
+.avatar-mini {
+  width: 50rpx;
+  height: 50rpx;
+  border-radius: 50%;
+  border: 2rpx solid #666;
+}
+
+.target-border {
+  border-color: #ff4d4f;
+  /* Highlight target */
+}
+
+.seat-mini {
+  font-size: 24rpx;
+  color: #eee;
+}
+
+.target-text {
+  color: #ff4d4f;
+  font-weight: bold;
+}
+
+.vote-arrow-box {
+  flex: 1;
+  text-align: center;
+}
+
+.vote-arrow-icon {
+  color: #aaa;
+  font-size: 24rpx;
+}
+
+.abstain-box {
+  background: #444;
+  padding: 5rpx 15rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: #bbb;
+}
+
+/* Modal Styles */
+.vote-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.3s;
+}
+
+.vote-modal.show {
+  visibility: visible;
+  opacity: 1;
+}
+
+.vote-modal-content {
+  width: 85%;
+  max-width: 600rpx;
+  background: #1f1f23;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  border: 1px solid #444;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.vote-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+  padding-bottom: 20rpx;
+  margin-bottom: 20rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.close-btn {
+  font-size: 50rpx;
+  color: #888;
+  line-height: 40rpx;
+  padding: 10rpx;
+}
+
+.vote-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200rpx;
+}

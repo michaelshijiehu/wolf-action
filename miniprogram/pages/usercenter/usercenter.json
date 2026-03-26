@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "我的",
+  "usingComponents": {
+    "avatar-uploader": "/components/avatar-uploader/avatar-uploader",
+    "loading-button": "/components/loading-button/loading-button",
+    "skeleton": "/components/skeleton/skeleton"
+  }
+}

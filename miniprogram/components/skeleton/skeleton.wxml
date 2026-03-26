@@ -1,0 +1,8 @@
+<!-- 骨架屏组件 -->
+<view class="skeleton {{animate ? 'skeleton-animate' : ''}}">
+  <view class="skeleton-item {{type}}"
+        wx:for="{{list}}"
+        wx:key="index"
+        style="width: {{item.width || '100%'}}; height: {{item.height || '32rpx'}}; border-radius: {{item.radius || '8rpx'}}; margin-bottom: {{item.margin || '20rpx'}};">
+  </view>
+</view>

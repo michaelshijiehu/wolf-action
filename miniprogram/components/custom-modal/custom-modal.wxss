@@ -1,0 +1,107 @@
+/* 自定义弹窗组件样式 */
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-container {
+  width: 80%;
+  max-width: 320px;
+  background-color: #1a1a1f;
+  border-radius: 16rpx;
+  overflow: hidden;
+  animation: slideUp 0.25s ease-out;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.3);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(40rpx);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  padding: 32rpx 32rpx 16rpx;
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.modal-body {
+  padding: 16rpx 32rpx 32rpx;
+  text-align: center;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modal-content-text {
+  font-size: 30rpx;
+  color: #a0a0a0;
+  line-height: 1.6;
+}
+
+.modal-footer {
+  display: flex;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-btn {
+  flex: 1;
+  height: 100rpx;
+  line-height: 100rpx;
+  font-size: 32rpx;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+}
+
+.modal-btn::after {
+  border: none;
+}
+
+.modal-btn.cancel {
+  color: #888888;
+  border-right: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-btn.confirm {
+  color: #ffd700;
+  font-weight: 500;
+}
+
+.modal-btn.confirm.danger {
+  color: #ff4d4f;
+}
+
+.modal-btn-hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}

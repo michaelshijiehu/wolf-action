@@ -1,0 +1,96 @@
+/* 带加载状态的按钮组件样式 */
+.loading-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  border: none;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-btn::after {
+  border: none;
+}
+
+.loading-btn.loading {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.loading-btn.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 加载图标 */
+.loading-icon {
+  margin-right: 12rpx;
+}
+
+.spinner {
+  width: 32rpx;
+  height: 32rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 主题变体 */
+.loading-btn.primary {
+  background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+  color: #1a1a1f;
+  font-weight: 800;
+  border: 4rpx solid rgba(255, 255, 255, 0.4); /* Thicker border */
+}
+
+/* 扩散发光特效 */
+.loading-btn.glow-btn {
+  box-shadow: 0 8rpx 32rpx rgba(255, 215, 0, 0.35), inset 0 2rpx 8rpx rgba(255, 255, 255, 0.4);
+}
+
+.loading-btn.glow-btn:active {
+  box-shadow: 0 4rpx 16rpx rgba(255, 215, 0, 0.5), inset 0 4rpx 12rpx rgba(0, 0, 0, 0.4);
+  transform: scale(0.97);
+}
+
+.loading-btn.secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffd700;
+  border: 4rpx solid rgba(255, 215, 0, 0.5); /* Thicker border */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.loading-btn.secondary:active {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(0.97);
+}
+
+.loading-btn.danger {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+  color: #ffffff;
+}
+
+.loading-btn.ghost {
+  background: transparent;
+  color: #ffd700;
+  border: 2rpx solid #ffd700;
+}
+
+/* 文字样式 */
+.btn-text {
+  line-height: 1;
+}

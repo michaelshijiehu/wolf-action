@@ -1,0 +1,31 @@
+<!-- 自定义弹窗组件 -->
+<view class="modal-mask" wx:if="{{show}}" bindtap="onMaskTap" catchtouchmove="preventMove">
+  <view class="modal-container" catchtap="preventBubble">
+    <!-- 标题 -->
+    <view class="modal-header" wx:if="{{title}}">
+      <text class="modal-title">{{title}}</text>
+    </view>
+
+    <!-- 内容 -->
+    <view class="modal-body">
+      <slot>
+        <text class="modal-content-text">{{content}}</text>
+      </slot>
+    </view>
+
+    <!-- 底部按钮 -->
+    <view class="modal-footer">
+      <button wx:if="{{showCancel}}"
+              class="modal-btn cancel"
+              hover-class="modal-btn-hover"
+              bindtap="onCancel">
+        {{cancelText}}
+      </button>
+      <button class="modal-btn confirm {{confirmClass}}"
+              hover-class="modal-btn-hover"
+              bindtap="onConfirm">
+        {{confirmText}}
+      </button>
+    </view>
+  </view>
+</view>

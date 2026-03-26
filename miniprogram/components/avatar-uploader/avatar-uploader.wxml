@@ -1,0 +1,18 @@
+<!-- 头像上传组件 -->
+<view class="avatar-uploader">
+  <button class="avatar-btn"
+          open-type="chooseAvatar"
+          bind:chooseavatar="onChooseAvatar"
+          hover-class="avatar-btn-hover">
+    <image class="avatar-image {{size}}"
+           src="{{avatarUrl || defaultAvatar}}"
+           mode="aspectFill">
+    </image>
+    <view class="avatar-overlay" wx:if="{{showTip && !avatarUrl}}">
+      <text class="tip-text">{{tip}}</text>
+    </view>
+    <view class="edit-badge" wx:if="{{showEdit && avatarUrl}}">
+      <text class="edit-icon">+</text>
+    </view>
+  </button>
+</view>

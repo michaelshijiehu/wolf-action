@@ -1,0 +1,5 @@
+{
+  "usingComponents": {
+    "custom-modal": "/components/custom-modal/custom-modal"
+  }
+}

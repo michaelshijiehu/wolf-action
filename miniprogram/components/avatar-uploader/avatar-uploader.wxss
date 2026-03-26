@@ -1,0 +1,83 @@
+/* 头像上传组件样式 */
+.avatar-uploader {
+  display: inline-block;
+}
+
+.avatar-btn {
+  position: relative;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  line-height: 1;
+}
+
+.avatar-btn::after {
+  border: none;
+}
+
+.avatar-image {
+  border-radius: 50%;
+  border: 4rpx solid rgba(255, 215, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.avatar-image.small {
+  width: 80rpx;
+  height: 80rpx;
+}
+
+.avatar-image.medium {
+  width: 120rpx;
+  height: 120rpx;
+}
+
+.avatar-image.large {
+  width: 160rpx;
+  height: 160rpx;
+}
+
+.avatar-btn-hover .avatar-image {
+  transform: scale(0.95);
+  border-color: #ffd700;
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tip-text {
+  font-size: 22rpx;
+  color: #ffffff;
+  text-align: center;
+}
+
+.edit-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #ffd700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.3);
+}
+
+.edit-icon {
+  font-size: 28rpx;
+  color: #000000;
+  font-weight: bold;
+  line-height: 1;
+}

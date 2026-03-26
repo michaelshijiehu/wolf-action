@@ -1,0 +1,7 @@
+<!-- 带加载状态的按钮组件 -->
+<button class="loading-btn {{customClass}} {{loading ? 'loading' : ''}} {{disabled ? 'disabled' : ''}}" disabled="{{loading || disabled}}" form-type="{{formType}}" open-type="{{openType}}" hover-class="{{loading || disabled ? '' : hoverClass}}" catchtap="onTap" bindgetuserinfo="onGetUserInfo" bindchooseavatar="onChooseAvatar" bindcontact="onContact" bindgetphonenumber="onGetPhoneNumber" binderror="onError" bindopensetting="onOpenSetting" bindlaunchapp="onLaunchApp">
+  <view class="loading-icon" wx:if="{{loading}}">
+    <view class="spinner"></view>
+  </view>
+  <text class="btn-text">{{loading ? loadingText : text}}</text>
+</button>

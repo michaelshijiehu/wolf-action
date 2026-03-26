@@ -1,0 +1,51 @@
+/* 骨架屏组件样式 */
+.skeleton {
+  padding: 20rpx;
+}
+
+.skeleton-item {
+  background: linear-gradient(90deg, #1a1a1f 25%, #2a2a30 37%, #1a1a1f 63%);
+  background-size: 400% 100%;
+}
+
+.skeleton-animate .skeleton-item {
+  animation: skeleton-loading 1.4s ease infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* 预设类型 */
+.skeleton-item.avatar {
+  width: 120rpx !important;
+  height: 120rpx !important;
+  border-radius: 50% !important;
+}
+
+.skeleton-item.title {
+  width: 60% !important;
+  height: 40rpx !important;
+}
+
+.skeleton-item.text {
+  width: 100% !important;
+  height: 32rpx !important;
+}
+
+.skeleton-item.button {
+  width: 200rpx !important;
+  height: 80rpx !important;
+  border-radius: 40rpx !important;
+}
+
+.skeleton-item.card {
+  width: 100% !important;
+  height: 200rpx !important;
+  border-radius: 16rpx !important;
+}
